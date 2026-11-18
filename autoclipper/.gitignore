@@ -1,0 +1,26 @@
+# Ambiente virtual e cache do Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Buffer das lives e clipes gerados
+buffer/
+clipes/
+videos/
+*.ts
+*.mp4
+
+# Logs
+*.log
+
+# Configurações locais (seus links e pastas) / segredos
+config_local.py
+.env
+
+# Sistema e editores
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
