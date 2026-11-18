@@ -24,6 +24,7 @@ dependencies = [
     "tensorflow",
     "tensorflow-hub",
     "setuptools<81",  # tensorflow-hub ainda usa pkg_resources
+    "opencv-python",  # janela para marcar a câmera do streamer
 ]
 
 [project.optional-dependencies]

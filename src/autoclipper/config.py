@@ -1,5 +1,5 @@
 # =====================================================================
-#                    CONFIGURAÇÃO DO AUTO-CLIPPER (v1)
+#                    CONFIGURAÇÃO DO AUTO-CLIPPER
 #
 #  Valores padrão. NÃO edite aqui: crie um config_local.py na pasta de
 #  onde você roda o programa (a raiz do projeto) com seus links e pastas.
@@ -20,10 +20,16 @@ LINKS_DAS_LIVES: list[str] = []
 # ---------------------------------------------------------------------
 #  PASTAS
 # ---------------------------------------------------------------------
-# Onde os clipes finais são salvos (padrão: pasta "videos" na raiz do projeto).
+# Pasta principal dos clipes (padrão: pasta "videos" na raiz do projeto).
 # Para acessar pelo celular, aponte para o Google Drive para desktop,
-# ex.: r"G:\Meu Drive\Clipes"
+# ex.: r"G:\Meu Drive\Clipes". Dentro dela ficam:
+#   vertical\<canal>\    -> 9:16 para postar
+#   originais\<canal>\   -> 16:9 original (sem recodificar)
 PASTA_CLIPES = str(PASTA_BASE / "videos")
+
+# Opcional: pastas separadas para cada tipo. Vazio = dentro de PASTA_CLIPES.
+PASTA_VERTICAL = ""
+PASTA_ORIGINAIS = ""
 
 # Buffer temporário (pedaços de 10s das lives). NÃO coloque dentro do Drive.
 PASTA_BUFFER = str(PASTA_BASE / "buffer")
@@ -58,23 +64,32 @@ LIMIAR_MUSICA = 0.5  # se "Music" dominar o áudio, o evento é ignorado
 DB_ACIMA_MEDIA_MIN = 5  # +5 dB acima da média começa a pontuar
 DB_ACIMA_MEDIA_MAX = 10  # +10 dB = pontuação máxima de volume
 
+# fmt: off
 PALAVRAS_CHAT = [
-    "kkk",
-    "kekw",
-    "lul",
-    "omegalul",
-    "lmao",
-    "rsrs",
-    "hahaha",
-    "mds",
-    "caralho",
-    "nossa",
-    "pog",
-    "omg",
-    "😂",
-    "🤣",
-    "💀",
+    "kkk", "kekw", "lul", "omegalul", "lmao", "rsrs", "hahaha", "mds",
+    "caralho", "nossa", "pog", "omg", "😂", "🤣", "💀",
 ]
+# fmt: on
+
+# ---------------------------------------------------------------------
+#  FORMATO VERTICAL 9:16 (Reels / TikTok / Shorts)
+#  Layout por canal (escolhido no painel, salvo em canais.json):
+#    "A" = faixa vazia no topo + gameplay no meio + câmera do streamer embaixo
+#    "C" = vídeo inteiro no centro, com o próprio vídeo desfocado no fundo
+#  Canal em "A" sem câmera marcada sai em "C" até a câmera ser marcada.
+# ---------------------------------------------------------------------
+LAYOUT_PADRAO = "A"
+VERTICAL_LARGURA = 1080
+VERTICAL_ALTURA = 1920
+VERTICAL_FPS = 60
+FAIXA_TOPO_PX = 200  # faixa vazia no topo, para escrever o título no app
+CAMERA_PCT = 0.30  # altura da câmera no layout A (fração da tela)
+# Codificador: "auto" (placa AMD se disponível, senão processador), "amf" ou "cpu"
+CODIFICADOR = "auto"
+VERTICAL_BITRATE = "10M"
+
+# Ajustes por canal (layout e posição da câmera), gravados pelo painel
+ARQUIVO_CANAIS = PASTA_BASE / "canais.json"
 
 # ---------------------------------------------------------------------
 #  CALIBRAÇÃO
@@ -109,3 +124,7 @@ def _carregar_config_local(caminho: Path) -> None:
 
 
 _carregar_config_local(ARQUIVO_CONFIG_LOCAL)
+
+# pastas derivadas (calculadas depois do config_local, que pode mudar PASTA_CLIPES)
+PASTA_VERTICAL = PASTA_VERTICAL or str(Path(PASTA_CLIPES) / "vertical")
+PASTA_ORIGINAIS = PASTA_ORIGINAIS or str(Path(PASTA_CLIPES) / "originais")
