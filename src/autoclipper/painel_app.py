@@ -112,7 +112,10 @@ def lives():
                     key=f"clip_{canal}",
                     use_container_width=True,
                     disabled=estado != AO_VIVO,
-                    help="Clipe manual: 1 min antes + 2 min depois de agora",
+                    help=(
+                        f"Clipe manual: {config.SEGUNDOS_ANTES} s antes + "
+                        f"{config.SEGUNDOS_DEPOIS} s depois de agora"
+                    ),
                 ):
                     ok, msg = g.clipar(canal)
                     st.toast(f"{canal}: {msg}")

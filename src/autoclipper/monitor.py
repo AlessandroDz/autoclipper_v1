@@ -5,7 +5,7 @@ Ciclo de vida (controlado pelo painel ou pelo terminal):
     pausar()   -> para captura, análise e chat (zero CPU e banda); o buffer fica
     retomar()  -> volta a capturar; clipes nunca juntam trechos de antes da pausa
     finalizar()-> para tudo e apaga o buffer
-    clipar_agora() -> clipe manual (1 min antes + 2 min depois do clique)
+    clipar_agora() -> clipe manual (SEGUNDOS_ANTES antes + SEGUNDOS_DEPOIS depois do clique)
 """
 
 import logging
@@ -171,7 +171,8 @@ class MonitorLive:
             return False, "a live precisa estar ao vivo para clipar"
         t = time.time()
         self._disparar(t, "manual", None)
-        return True, "clipe manual iniciado - fica pronto em ~2 min"
+        espera = round((config.SEGUNDOS_DEPOIS + config.DURACAO_SEGMENTO) / 60, 1)
+        return True, f"clipe manual iniciado - o corte sai em ~{espera:g} min"
 
     def _comecar(self):
         if self.detector is None:
