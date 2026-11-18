@@ -146,3 +146,47 @@ def encerrar_filhos_ao_fechar() -> bool:
         return False
     _job_handle = job
     return True
+
+
+def processos_filhos() -> list[int] | None:
+    """PIDs dos programas abertos pelo Auto-Clipper que ainda estão rodando.
+
+    Lê a lista do próprio Job Object (exato: só o que este programa abriu).
+    Devolve None se o job não estiver ativo (fora do Windows ou sem o painel).
+    """
+    if sys.platform != "win32" or _job_handle is None:
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    capacidade = 256
+
+    class LISTA_PIDS(ctypes.Structure):
+        _fields_ = [
+            ("NumberOfAssignedProcesses", wintypes.DWORD),
+            ("NumberOfProcessIdsInList", wintypes.DWORD),
+            ("ProcessIdList", ctypes.c_size_t * capacidade),
+        ]
+
+    job_object_basic_process_id_list = 3
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.QueryInformationJobObject.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p,
+    ]  # fmt: skip
+    lista = LISTA_PIDS()
+    if not k32.QueryInformationJobObject(
+        _job_handle, job_object_basic_process_id_list, ctypes.byref(lista),
+        ctypes.sizeof(lista), None,
+    ):  # fmt: skip
+        return None
+    eu = os.getpid()
+    pids = lista.ProcessIdList[: lista.NumberOfProcessIdsInList]
+    return [int(p) for p in pids if int(p) != eu]
+
+
+def forcar_encerramento(pids: list[int]) -> None:
+    for pid in pids:
+        try:
+            os.kill(pid, 9)  # no Windows vira TerminateProcess
+        except OSError:
+            pass  # já tinha fechado

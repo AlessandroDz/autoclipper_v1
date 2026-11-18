@@ -57,6 +57,7 @@ A codificação usa a **placa de vídeo AMD (AMF)** quando disponível — bem m
 - Watchdog: 60 s sem áudio → reinicia a captura.
 - Os arquivos são gerados fora da pasta final e só depois movidos (seguro para pastas sincronizadas como Google Drive).
 - Depois de uma pausa, um clipe nunca junta trechos de antes e depois da pausa.
+- No Windows, os programas abertos (streamlink, yt-dlp, ffmpeg) ficam num *Job Object*: se o Auto-Clipper fechar — até pelo X da janela — eles fecham juntos, sem processos órfãos.
 
 ---
 
@@ -131,11 +132,11 @@ O vertical e o original do mesmo momento têm o **mesmo nome**: `<canal>_<data>_
 
 ### Painel (recomendado)
 
-Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe -m autoclipper.painel`). O painel abre no navegador em `http://localhost:8501`. A janela preta que abre junto é o motor: **minimize, não feche** — fechar desliga o Auto-Clipper.
+Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe -m autoclipper.painel`). O painel abre no navegador em `http://localhost:8501` assim que estiver pronto; se ele já estiver aberto, o atalho só abre a página. A janela preta que abre junto é o motor: **minimize, não feche**. Para desligar, use **⏻ Encerrar tudo** no painel.
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│ 🎬 Auto-Clipper                 [▶ Iniciar todas] [⏹ Finalizar todas] │
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🎬 Auto-Clipper   [▶ Iniciar todas] [⏹ Finalizar todas] [⏻ Encerrar tudo] │
 │ Lives ativas 3 de 3 · Clipes hoje 7 · Espaço livre · Na fila   │
 ├────────────────────────────────────────────────────────────────┤
 │ burn · Twitch     🟢 Ao vivo         [✂ Clipar] [⏸ Pausar] [⏹]  │
@@ -149,7 +150,9 @@ Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe 
 
 | Botão | O que faz |
 |---|---|
-| **Clipar** | Clipe manual: 1 min antes + 2 min depois do clique. Sempre gera, mesmo com outro clipe em andamento |
+| **Encerrar tudo** | Finaliza as lives, termina os clipes pendentes, confere que nenhum programa (captura, chat, ffmpeg) ficou aberto e fecha o painel |
+| **Finalizar todas** | Para todas as lives, mas o painel continua aberto |
+| **Clipar** | Clipe manual: `SEGUNDOS_ANTES` antes + `SEGUNDOS_DEPOIS` depois do clique. Sempre gera, mesmo com outro clipe em andamento |
 | **Pausar** | Desliga captura, análise e chat daquela live (zero CPU e banda) até **Retomar** |
 | **Finalizar** | Desconecta e apaga o buffer daquela live |
 | **Apagar clipes antigos** | Mostra quantos arquivos (vertical + original) serão apagados e pede confirmação |

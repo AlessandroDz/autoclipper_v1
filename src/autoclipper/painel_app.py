@@ -1,8 +1,8 @@
 """Página do painel (Streamlit). Abra com:  python -m autoclipper.painel
 
 O motor (Gerenciador) é criado uma vez só e continua rodando mesmo se a aba do
-navegador for fechada ou recarregada; ele só para quando a janela do painel
-(o terminal minimizado) for fechada.
+navegador for fechada ou recarregada; ele só para com o botão "Encerrar tudo"
+ou quando a janela do painel (o terminal minimizado) for fechada.
 """
 
 from autoclipper.sistema import silenciar_tensorflow
@@ -12,8 +12,10 @@ silenciar_tensorflow()
 import os
 import subprocess
 import sys
+import threading
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from autoclipper import canais, config
 from autoclipper.gerenciador import Gerenciador
@@ -62,14 +64,95 @@ g = motor()
 # =====================================================================
 #  CABEÇALHO
 # =====================================================================
-col_titulo, col_ini, col_fim = st.columns([2.2, 1.3, 1.3], vertical_alignment="center")
-col_titulo.markdown("## 🎬 Auto-Clipper")
+col_titulo, col_ini, col_fim, col_sair = st.columns(
+    [1.6, 1.25, 1.25, 1.25], vertical_alignment="center"
+)
+col_titulo.markdown("### 🎬&nbsp;Auto&#8209;Clipper")  # espaço e hífen que não quebram
 if col_ini.button("▶ Iniciar todas", use_container_width=True, disabled=not g.monitores):
     with st.spinner("Carregando o modelo de áudio e conectando nas lives…"):
         g.iniciar_todas()
-if col_fim.button("⏹ Finalizar todas", use_container_width=True, disabled=not g.monitores):
+if col_fim.button(
+    "⏹ Finalizar todas",
+    use_container_width=True,
+    disabled=not g.monitores,
+    help="Para todas as lives, mas o painel continua aberto",
+):
     g.finalizar_todas()
     st.toast("Todas as lives foram finalizadas.")
+if col_sair.button(
+    "⏻ Encerrar tudo",
+    use_container_width=True,
+    help="Fecha o Auto-Clipper inteiro e confere que nada ficou rodando",
+):
+    st.session_state["confirmar_encerrar"] = True
+
+
+def encerrar_tudo():
+    """Desliga tudo, mostra o resultado e fecha o painel (e a janela preta)."""
+    andamento = st.empty()
+    with st.spinner("Encerrando…"):
+        resumo = g.encerrar_tudo(progresso=lambda msg: andamento.info(msg))
+    andamento.empty()
+
+    abertos = resumo["processos_abertos"]
+    if abertos == 0:
+        st.success(
+            "✅ **Tudo encerrado.** Nenhum programa do Auto-Clipper ficou aberto "
+            "(captura, chat e ffmpeg conferidos). Pode fechar esta aba."
+        )
+    elif abertos is None:
+        st.success("✅ Lives finalizadas e fila concluída. Pode fechar esta aba.")
+        st.caption("Não deu para conferir os programas abertos (painel aberto sem o atalho).")
+    else:
+        st.error(
+            f"⚠️ {abertos} programa(s) não fecharam nem à força. Feche a janela preta "
+            "do Auto-Clipper para encerrar o resto."
+        )
+    if resumo["forcados"]:
+        st.caption(f"{resumo['forcados']} programa(s) precisaram ser fechados à força.")
+    if resumo["fila_restante"]:
+        st.warning(
+            f"{resumo['fila_restante']} clipe(s) não terminaram de converter a tempo; "
+            "os originais ficaram em buffer\\_processando."
+        )
+    # troca a página por uma tela final (em vez do aviso "Connection error" do
+    # Streamlit) e desliga o servidor do painel; a janela preta fecha junto
+    texto = "Nenhum programa ficou aberto." if abertos == 0 else "Lives finalizadas."
+    components.html(
+        f"""<script>
+        setTimeout(() => {{
+          const d = window.parent.document;
+          d.title = "Auto-Clipper encerrado";
+          d.body.innerHTML = `<div style="font-family:sans-serif;background:#0e1117;
+            color:#fafafa;height:100vh;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;gap:12px">
+            <div style="font-size:48px">✅</div>
+            <div style="font-size:24px;font-weight:600">Auto-Clipper encerrado</div>
+            <div style="color:#a3a8b8">{texto} Pode fechar esta aba.</div>
+            <div style="color:#6b7080;font-size:13px">Para abrir de novo, use o atalho
+            Auto-Clipper na Área de Trabalho.</div></div>`;
+        }}, 2000);
+        </script>""",
+        height=0,
+    )
+    threading.Timer(3, lambda: os._exit(0)).start()
+    st.stop()
+
+
+if st.session_state.get("confirmar_encerrar"):
+    with st.container(border=True):
+        pendentes = sum(s["pendentes"] for s in g.status())
+        st.warning(
+            "**Encerrar tudo?** As lives são finalizadas, os clipes pendentes "
+            f"({pendentes}) são terminados e o painel fecha."
+        )
+        sim, nao = st.columns(2)
+        if sim.button("Sim, encerrar tudo", type="primary", use_container_width=True):
+            st.session_state.pop("confirmar_encerrar", None)
+            encerrar_tudo()
+        if nao.button("Cancelar", use_container_width=True):
+            st.session_state.pop("confirmar_encerrar", None)
+            st.rerun()
 
 if not g.monitores:
     st.warning(

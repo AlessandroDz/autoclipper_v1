@@ -134,3 +134,42 @@ def test_segmentos_cobrem_o_intervalo(pastas, tmp_path):
     segs = [(float(i * 10), tmp_path / f"s{i}.ts") for i in range(10)]
     escolhidos = m.selecionar_segmentos(segs, 25, 45, inicio_sessao=0)
     assert [s for s, _ in escolhidos] == [20.0, 30.0, 40.0]
+
+
+# ---------------------------------------------------------------------
+#  encerrar tudo
+# ---------------------------------------------------------------------
+def test_encerrar_tudo_confere_que_nada_ficou_aberto(pastas, monkeypatch):
+    from autoclipper import sistema
+
+    respostas = iter([[111], []])  # um programa ainda fechando, depois nenhum
+    monkeypatch.setattr(sistema, "processos_filhos", lambda: next(respostas, []))
+    forcados = []
+    monkeypatch.setattr(sistema, "forcar_encerramento", forcados.extend)
+
+    mensagens = []
+    resumo = Gerenciador(links=[]).encerrar_tudo(progresso=mensagens.append)
+    assert resumo == {"fila_restante": 0, "processos_abertos": 0, "forcados": 0}
+    assert forcados == [] and mensagens
+
+
+def test_encerrar_tudo_forca_o_que_nao_fechou(pastas, monkeypatch):
+    from autoclipper import sistema
+
+    estado = {"vivos": [222, 333]}
+    monkeypatch.setattr(sistema, "processos_filhos", lambda: list(estado["vivos"]))
+
+    def forcar(pids):
+        estado["vivos"] = []
+
+    monkeypatch.setattr(sistema, "forcar_encerramento", forcar)
+    resumo = Gerenciador(links=[]).encerrar_tudo(espera_processos_s=0.1)
+    assert resumo["forcados"] == 2 and resumo["processos_abertos"] == 0
+
+
+def test_encerrar_tudo_sem_job_nao_quebra(pastas, monkeypatch):
+    from autoclipper import sistema
+
+    monkeypatch.setattr(sistema, "processos_filhos", lambda: None)
+    resumo = Gerenciador(links=[]).encerrar_tudo()
+    assert resumo["processos_abertos"] is None

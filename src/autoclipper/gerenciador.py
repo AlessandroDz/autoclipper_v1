@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import config
+from . import config, sistema
 from .monitor import PAUSADA, MonitorLive
 from .vertical import FilaVertical
 
@@ -102,6 +102,46 @@ class Gerenciador:
     def finalizar_todas(self):
         for m in self.monitores:
             m.finalizar()
+
+    def encerrar_tudo(self, progresso=None, espera_fila_s=900, espera_processos_s=15) -> dict:
+        """Desliga tudo sem perder clipe e confere que nenhum programa ficou aberto.
+
+        1. finaliza as lives (clipes pendentes são cortados na hora);
+        2. espera a fila terminar de gerar os verticais;
+        3. confere no Windows os programas abertos pelo Auto-Clipper e força o
+           fechamento do que sobrar.
+        """
+        avisar = progresso or (lambda _msg: None)
+        avisar("Finalizando as lives…")
+        self.finalizar_todas()
+
+        inicio = time.time()
+        while self.fila.tamanho() and time.time() - inicio < espera_fila_s:
+            avisar(f"Convertendo {self.fila.tamanho()} clipe(s) para vertical antes de fechar…")
+            time.sleep(1)
+        fila_restante = self.fila.tamanho()
+
+        avisar("Conferindo se algum programa ficou aberto…")
+        pids = sistema.processos_filhos()
+        forcados = 0
+        if pids is not None:
+            limite = time.time() + espera_processos_s
+            while pids and time.time() < limite:
+                time.sleep(0.5)
+                pids = sistema.processos_filhos() or []
+            if pids:
+                forcados = len(pids)
+                sistema.forcar_encerramento(pids)
+                time.sleep(1)
+                pids = sistema.processos_filhos() or []
+
+        resumo = {
+            "fila_restante": fila_restante,
+            "processos_abertos": None if pids is None else len(pids),
+            "forcados": forcados,
+        }
+        log.info(f"Encerrar tudo: {resumo}")
+        return resumo
 
     # =================================================================
     #  CONSULTAS (para o painel)
