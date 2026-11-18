@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoclipper"
-version = "1.0.0"
-description = "Gera clipes automáticos de lives da Twitch e do YouTube detectando risadas, gritos, explosões e picos no chat."
+version = "2.0.0"
+description = "Gera clipes verticais automáticos de lives da Twitch e do YouTube detectando risadas, gritos, explosões e picos no chat, com painel de controle."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -24,6 +24,7 @@ dependencies = [
     "tensorflow",
     "tensorflow-hub",
     "setuptools<81",  # tensorflow-hub ainda usa pkg_resources
+    "streamlit",
     "opencv-python",  # janela para marcar a câmera do streamer
 ]
 
@@ -32,6 +33,7 @@ dev = ["ruff", "pytest"]
 
 [project.scripts]
 autoclipper = "autoclipper.__main__:main"
+autoclipper-painel = "autoclipper.painel:main"
 
 [project.urls]
 Repository = "https://github.com/AlessandroDz/autoclipper_v1"
