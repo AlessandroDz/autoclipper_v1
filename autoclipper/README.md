@@ -79,11 +79,12 @@ LINKS_DAS_LIVES = [
     "https://www.youtube.com/live/ID_DO_VIDEO",
 ]
 
-PASTA_CLIPES = r"C:\caminho\para\os\clipes"
-# PASTA_CLIPES = r"G:\Meu Drive\Clipes"   # Google Drive para desktop → acesso pelo celular
+PASTA_CLIPES = r"G:\Meu Drive\videos"   # Google Drive para desktop → acesso pelo celular
 ```
 
 Sem `config_local.py`, os clipes vão para a pasta `videos` dentro do projeto.
+
+**Google Drive (opcional):** instale o [Google Drive para desktop](https://www.google.com/drive/download/) (`winget install Google.GoogleDrive`), faça login e aponte `PASTA_CLIPES` para uma pasta dentro de `G:\Meu Drive`. O clipe é gerado fora do Drive e só movido quando está pronto, então o Drive nunca sincroniza um arquivo pela metade.
 
 | Parâmetro | Padrão | O que faz |
 |---|---|---|
@@ -93,6 +94,7 @@ Sem `config_local.py`, os clipes vão para a pasta `videos` dentro do projeto.
 | `QUALIDADE` | `"best"` | Qualidade da captura (`"720p60"` alivia disco e banda) |
 | `PALAVRAS_CHAT` | `kkk, kekw, ...` | Palavras que indicam reação no chat |
 | `INTERVALO_LOG_SCORE` | `15` | Loga o maior score a cada N s, para calibrar (0 = desliga) |
+| `LOG_MAX_MB` / `LOG_BACKUPS` | `5` / `3` | Rotação do log: ao chegar em 5 MB vira `.1`, `.2`, `.3` e o mais antigo é apagado |
 
 ## Uso
 
@@ -124,11 +126,23 @@ Compare com os momentos que você achou bons na live e ajuste `LIMIAR_SCORE`.
 ## Estrutura
 
 ```
-config.py      # links das lives e todos os parâmetros
-main.py        # ponto de entrada
-monitor.py     # MonitorLive: captura, buffer, análise, clipe e limpeza (iniciar()/parar())
-detector.py    # DetectorAudio (YAMNet) + volume em dB
-chat.py        # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
+config.py         # valores padrão de todos os parâmetros
+config_local.py   # seus links e pastas (fora do Git)
+main.py           # ponto de entrada + log com rotação
+monitor.py        # MonitorLive: captura, buffer, análise, clipe e limpeza (iniciar()/parar())
+detector.py       # DetectorAudio (YAMNet) + volume em dB
+chat.py           # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
+pyproject.toml    # metadados do projeto + configuração do Ruff
+```
+
+## Desenvolvimento
+
+O código segue o padrão do **[Ruff](https://docs.astral.sh/ruff/)** (lint + formatação, configurado no `pyproject.toml`):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m ruff format .
 ```
 
 ## Stack
@@ -153,3 +167,7 @@ chat.py        # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
 - **Direitos autorais:** postar clipes de outros criadores pode gerar strike. Tenha permissão do streamer ou participe de um programa oficial de clipes.
 - **Desempenho:** 2 lives rodam tranquilo na CPU. Cada live usa ~2 GB de disco de buffer.
 - YouTube muda com frequência: se a captura ou o chat pararem, atualize com `pip install -U yt-dlp streamlink`.
+
+## Licença
+
+[MIT](LICENSE)

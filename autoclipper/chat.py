@@ -1,4 +1,5 @@
-"""Leitura do chat (Twitch via IRC anônimo, YouTube via chat-downloader)."""
+"""Leitura do chat (Twitch via IRC anônimo, YouTube via yt-dlp)."""
+
 import json
 import logging
 import shutil
@@ -32,8 +33,11 @@ def _textos_chat_youtube(linha: str):
                 partes.append(run["text"])
             elif "emoji" in run:  # emoji vem como objeto; usa o próprio caractere ou o atalho
                 e = run["emoji"]
-                partes.append(e.get("emojiId", "") if len(e.get("emojiId", "")) <= 2
-                              else " ".join(e.get("shortcuts", [])))
+                partes.append(
+                    e.get("emojiId", "")
+                    if len(e.get("emojiId", "")) <= 2
+                    else " ".join(e.get("shortcuts", []))
+                )
         textos.append("".join(partes))
     return textos
 
@@ -90,14 +94,21 @@ class LeitorChat:
         sock.close()
 
     def _youtube(self):
-        """yt-dlp grava o chat ao vivo em JSON (uma linha por evento); lemos o arquivo enquanto cresce."""
+        """O yt-dlp grava o chat ao vivo em JSON (um evento por linha).
+
+        O arquivo é lido enquanto cresce.
+        """
         pasta = Path(config.PASTA_BUFFER) / self.canal / "chat"
         shutil.rmtree(pasta, ignore_errors=True)
         pasta.mkdir(parents=True, exist_ok=True)
+        # fmt: off
+        cmd = [sys.executable, "-m", "yt_dlp", "-q", "--no-warnings", "--skip-download",
+               "--write-subs", "--sub-langs", "live_chat", "-o", str(pasta / "chat"), self.url]
+        # fmt: on
         proc = subprocess.Popen(
-            [sys.executable, "-m", "yt_dlp", "-q", "--no-warnings", "--skip-download",
-             "--write-subs", "--sub-langs", "live_chat", "-o", str(pasta / "chat"), self.url],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         try:

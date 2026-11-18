@@ -1,4 +1,5 @@
 """Detecção de eventos no áudio com YAMNet (Google) + volume."""
+
 import csv
 import threading
 
@@ -13,7 +14,7 @@ GRUPOS = {
 
 def rms_db(audio: np.ndarray) -> float:
     """Volume em dB de um trecho float32 [-1, 1]."""
-    return float(20 * np.log10(np.sqrt(np.mean(audio ** 2)) + 1e-9))
+    return float(20 * np.log10(np.sqrt(np.mean(audio**2)) + 1e-9))
 
 
 class DetectorAudio:

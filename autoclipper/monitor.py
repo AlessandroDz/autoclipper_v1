@@ -1,4 +1,5 @@
 """Monitor de uma live: captura -> buffer -> detecção -> clipe."""
+
 import logging
 import os
 import re
@@ -17,8 +18,8 @@ import config
 from chat import LeitorChat
 from detector import rms_db
 
-TAXA = 16000                 # Hz do áudio de análise
-BYTES_POR_SEG = TAXA * 2     # int16 mono
+TAXA = 16000  # Hz do áudio de análise
+BYTES_POR_SEG = TAXA * 2  # int16 mono
 FORMATO_SEG = "seg_%Y%m%d_%H%M%S"
 
 
@@ -66,9 +67,9 @@ class MonitorLive:
         self.online = False
 
         # detecção
-        self.hist_db = deque(maxlen=120)                                  # 2 min de volume
-        self.janela = deque(maxlen=10)                                    # últimos 10s
-        self.hist_score = deque(maxlen=config.BUFFER_MINUTOS * 60)       # (t, score, motivo)
+        self.hist_db = deque(maxlen=120)  # 2 min de volume
+        self.janela = deque(maxlen=10)  # últimos 10s
+        self.hist_score = deque(maxlen=config.BUFFER_MINUTOS * 60)  # (t, score, motivo)
         self.fim_ultimo_clipe = 0.0
         self.ultimo_corte = time.time()
 
@@ -92,6 +93,9 @@ class MonitorLive:
     # =================================================================
     #  CAPTURA
     # =================================================================
+    # Listas de argumentos de linha de comando: o formatador fica desligado para
+    # manter cada opção na mesma linha do seu valor (ex.: "-f", "segment").
+    # fmt: off
     def _comando_captura(self):
         if self.plataforma == "youtube" and config.USAR_YTDLP_NO_YOUTUBE:
             return [sys.executable, "-m", "yt_dlp", "-q", "--no-warnings", "-f", "best",
@@ -110,45 +114,54 @@ class MonitorLive:
             # saída 2: áudio cru 16 kHz mono para análise
             "-map", "0:a:0", "-ac", "1", "-ar", str(TAXA), "-f", "s16le", "pipe:1",
         ]
+    # fmt: on
 
     def _loop_captura(self):
-        log_erros = open(self.pasta_buffer.parent / f"{self.canal}_captura.log", "ab")
+        # log de erros do streamlink/ffmpeg: escrito direto pelos processos, então a
+        # rotação é feita ao abrir (passou do limite -> vira .1, substituindo o antigo)
+        caminho_log = self.pasta_buffer.parent / f"{self.canal}_captura.log"
+        if caminho_log.exists() and caminho_log.stat().st_size > config.LOG_MAX_MB * 1024 * 1024:
+            caminho_log.replace(caminho_log.with_name(caminho_log.name + ".1"))
+        with open(caminho_log, "ab") as log_erros:
+            while not self.parar_evento.is_set():
+                try:
+                    self._capturar(log_erros)
+                except FileNotFoundError as e:
+                    self.log.error(f"Programa não encontrado: {e}. Confira a instalação do ffmpeg.")
+                finally:
+                    self._matar_processos()
+                    self.online = False
+
+                if not self.parar_evento.is_set():
+                    self.log.info("Live offline/caiu. Tentando de novo em 30s...")
+                    self.parar_evento.wait(30)
+
+    def _capturar(self, log_erros):
+        """Uma sessão de captura: roda até a live cair ou o monitor ser parado."""
+        p1 = subprocess.Popen(self._comando_captura(), stdout=subprocess.PIPE, stderr=log_erros)
+        p2 = subprocess.Popen(
+            self._comando_ffmpeg(), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=log_erros
+        )
+        p1.stdout.close()
+        self.procs = [p1, p2]
+        avisou = False
+
         while not self.parar_evento.is_set():
-            try:
-                p1 = subprocess.Popen(self._comando_captura(), stdout=subprocess.PIPE,
-                                      stderr=log_erros)
-                p2 = subprocess.Popen(self._comando_ffmpeg(), stdin=p1.stdout,
-                                      stdout=subprocess.PIPE, stderr=log_erros)
-                p1.stdout.close()
-                self.procs = [p1, p2]
-                avisou = False
-
-                while not self.parar_evento.is_set():
-                    dados = p2.stdout.read(3200)  # 0,1 s de áudio
-                    if not dados:
-                        break
-                    agora = time.time()
-                    if not avisou:
-                        self.log.info("Live ONLINE - capturando.")
-                        avisou, self.online = True, True
-                        if self.inicio_buffer is None:
-                            self.inicio_buffer = agora
-                    with self.audio_lock:
-                        self.audio.extend(dados)
-                        excesso = len(self.audio) - 5 * BYTES_POR_SEG
-                        if excesso > 0:
-                            del self.audio[: excesso - (excesso % 2)]
-                    self.ultimo_audio = agora
-            except FileNotFoundError as e:
-                self.log.error(f"Programa não encontrado: {e}. Confira a instalação do ffmpeg.")
-            finally:
-                self._matar_processos()
-                self.online = False
-
-            if not self.parar_evento.is_set():
-                self.log.info("Live offline/caiu. Tentando de novo em 30s...")
-                self.parar_evento.wait(30)
-        log_erros.close()
+            dados = p2.stdout.read(3200)  # 0,1 s de áudio
+            if not dados:
+                break
+            agora = time.time()
+            if not avisou:
+                self.log.info("Live ONLINE - capturando.")
+                avisou, self.online = True, True
+                if self.inicio_buffer is None:
+                    self.inicio_buffer = agora
+            with self.audio_lock:
+                self.audio.extend(dados)
+                excesso = len(self.audio) - 5 * BYTES_POR_SEG
+                if excesso > 0:
+                    del self.audio[: excesso - (excesso % 2)]
+            self.ultimo_audio = agora
 
     def _matar_processos(self):
         for p in self.procs:
@@ -172,7 +185,7 @@ class MonitorLive:
                 continue
 
             with self.audio_lock:
-                bruto = bytes(self.audio[-2 * BYTES_POR_SEG:])
+                bruto = bytes(self.audio[-2 * BYTES_POR_SEG :])
             if not self.online or len(bruto) < BYTES_POR_SEG:
                 continue
 
@@ -193,8 +206,8 @@ class MonitorLive:
         tipo, evento = max(grupos.items(), key=lambda kv: kv[1])
 
         if musica > config.LIMIAR_MUSICA and musica >= evento:
-            evento *= 0.3   # música dominando: derruba o evento
-            vol = 0.0       # e ignora volume
+            evento *= 0.3  # música dominando: derruba o evento
+            vol = 0.0  # e ignora volume
         elif base is not None:
             faixa = config.DB_ACIMA_MEDIA_MAX - config.DB_ACIMA_MEDIA_MIN
             vol = min(max((db - base - config.DB_ACIMA_MEDIA_MIN) / faixa, 0.0), 1.0)
@@ -218,8 +231,10 @@ class MonitorLive:
             if agora - getattr(self, "_calib_t", 0) >= config.INTERVALO_LOG_SCORE:
                 s, tp, ev, vl, d, b, mu, ch = self._calib_max
                 b_txt = f"{b:.1f}" if b is not None else "--"
-                self.log.info(f"[calib] max={s:.2f} | {tp}={ev:.2f} vol={vl:.2f} "
-                              f"(db={d:.1f} base={b_txt}) musica={mu:.2f} chat={ch:.2f}")
+                self.log.info(
+                    f"[calib] max={s:.2f} | {tp}={ev:.2f} vol={vl:.2f} "
+                    f"(db={d:.1f} base={b_txt}) musica={mu:.2f} chat={ch:.2f}"
+                )
                 self._calib_t, self._calib_max = agora, (-1,)
 
         # --- disparo normal
@@ -229,8 +244,10 @@ class MonitorLive:
 
         # --- corte forçado
         if agora - self.ultimo_corte >= config.CORTE_FORCADO_MINUTOS * 60:
-            minimo = max(self.fim_ultimo_clipe + config.SEGUNDOS_ANTES,
-                         (self.inicio_buffer or agora) + config.SEGUNDOS_ANTES)
+            minimo = max(
+                self.fim_ultimo_clipe + config.SEGUNDOS_ANTES,
+                (self.inicio_buffer or agora) + config.SEGUNDOS_ANTES,
+            )
             candidatos = [h for h in self.hist_score if h[0] >= minimo]
             if candidatos:
                 t, s, _ = max(candidatos, key=lambda h: h[1])
@@ -290,12 +307,14 @@ class MonitorLive:
             "".join(f"file '{arq.resolve().as_posix()}'\n" for _, arq in selecionados),
             encoding="utf-8",
         )
+        # fmt: off
         cmd = [
             "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
             "-f", "concat", "-safe", "0", "-ss", f"{offset:.2f}", "-i", str(lista),
             "-t", f"{duracao:.2f}", "-c", "copy",
             "-bsf:a", "aac_adtstoasc", "-movflags", "+faststart", str(temp),
         ]
+        # fmt: on
         r = subprocess.run(cmd, capture_output=True, text=True)
         lista.unlink(missing_ok=True)
 

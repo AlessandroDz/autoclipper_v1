@@ -1,4 +1,5 @@
 """Auto-clipper v1 - rode com:  python main.py   (Ctrl+C para parar)"""
+
 import os
 import warnings
 
@@ -11,20 +12,33 @@ import logging
 import shutil
 import sys
 import time
+from logging.handlers import RotatingFileHandler
 
 import config
 from monitor import MonitorLive
 
 
 def configurar_log():
-    fmt = logging.Formatter("%(asctime)s [%(name)s] %(message)s", "%H:%M:%S")
     raiz = logging.getLogger()
     raiz.setLevel(logging.INFO)
-    for h in (logging.StreamHandler(sys.stdout),
-              logging.FileHandler("autoclipper.log", encoding="utf-8")):
-        h.setFormatter(fmt)
-        raiz.addHandler(h)
-    for barulhento in ("tensorflow", "absl", "chat_downloader"):
+
+    tela = logging.StreamHandler(sys.stdout)
+    tela.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s", "%H:%M:%S"))
+
+    # arquivo com rotação: ao chegar em LOG_MAX_MB, vira .1, .2... e o mais antigo é apagado
+    arquivo = RotatingFileHandler(
+        "autoclipper.log",
+        maxBytes=config.LOG_MAX_MB * 1024 * 1024,
+        backupCount=config.LOG_BACKUPS,
+        encoding="utf-8",
+    )
+    arquivo.setFormatter(
+        logging.Formatter("%(asctime)s [%(name)s] %(message)s", "%Y-%m-%d %H:%M:%S")
+    )
+
+    raiz.addHandler(tela)
+    raiz.addHandler(arquivo)
+    for barulhento in ("tensorflow", "absl"):
         logging.getLogger(barulhento).setLevel(logging.ERROR)
 
 
@@ -32,13 +46,16 @@ def recarregar_path_windows():
     """Terminal aberto antes de instalar o ffmpeg não enxerga o PATH novo: relê do registro."""
     if sys.platform != "win32":
         return
-    import os
     import winreg
 
     extras = []
-    for raiz, chave in ((winreg.HKEY_LOCAL_MACHINE,
-                         r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
-                        (winreg.HKEY_CURRENT_USER, r"Environment")):
+    for raiz, chave in (
+        (
+            winreg.HKEY_LOCAL_MACHINE,
+            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+        ),
+        (winreg.HKEY_CURRENT_USER, r"Environment"),
+    ):
         try:
             with winreg.OpenKey(raiz, chave) as k:
                 extras.append(os.path.expandvars(winreg.QueryValueEx(k, "Path")[0]))
@@ -57,13 +74,14 @@ def main():
         log.error("ffmpeg não encontrado. Instale com:  winget install Gyan.FFmpeg")
         return
 
-    links = [l for l in config.LINKS_DAS_LIVES if l.strip()]
+    links = [link for link in config.LINKS_DAS_LIVES if link.strip()]
     if not links:
         log.error("Coloque pelo menos um link em LINKS_DAS_LIVES (config.py).")
         return
 
     log.info("Carregando modelo de áudio (YAMNet)...")
     from detector import DetectorAudio
+
     detector = DetectorAudio()
 
     monitores = [MonitorLive(url, detector) for url in links]

@@ -25,11 +25,11 @@ PASTA_BUFFER = str(Path(__file__).parent / "buffer")
 # ---------------------------------------------------------------------
 #  CLIPE
 # ---------------------------------------------------------------------
-SEGUNDOS_ANTES = 60          # 1 min antes da flag
-SEGUNDOS_DEPOIS = 120        # 2 min depois da flag
-DURACAO_SEGMENTO = 10        # tamanho de cada pedaço do buffer (s)
-BUFFER_MINUTOS = 23          # quanto tempo de live fica guardado
-CORTE_FORCADO_MINUTOS = 20   # se ficar esse tempo sem clipe, corta o melhor momento
+SEGUNDOS_ANTES = 60  # 1 min antes da flag
+SEGUNDOS_DEPOIS = 120  # 2 min depois da flag
+DURACAO_SEGMENTO = 10  # tamanho de cada pedaço do buffer (s)
+BUFFER_MINUTOS = 23  # quanto tempo de live fica guardado
+CORTE_FORCADO_MINUTOS = 20  # se ficar esse tempo sem clipe, corta o melhor momento
 
 # Qualidade da captura: "best", "1080p60", "720p60", "720p"...
 QUALIDADE = "best"
@@ -43,17 +43,30 @@ USAR_YTDLP_NO_YOUTUBE = False
 #       volume + chat sem risada/grito/explosão (0.5) não dispara.
 # ---------------------------------------------------------------------
 LIMIAR_SCORE = 0.55
-PESO_AUDIO = 0.6     # risada / grito / explosão (YAMNet)
-PESO_VOLUME = 0.2    # volume acima da média do streamer
-PESO_CHAT = 0.3      # pico de mensagens no chat
+PESO_AUDIO = 0.6  # risada / grito / explosão (YAMNet)
+PESO_VOLUME = 0.2  # volume acima da média do streamer
+PESO_CHAT = 0.3  # pico de mensagens no chat
 
 LIMIAR_MUSICA = 0.5  # se "Music" dominar o áudio, o evento é ignorado
-DB_ACIMA_MEDIA_MIN = 6    # +6 dB acima da média começa a pontuar
-DB_ACIMA_MEDIA_MAX = 12   # +12 dB = pontuação máxima de volume
+DB_ACIMA_MEDIA_MIN = 6  # +6 dB acima da média começa a pontuar
+DB_ACIMA_MEDIA_MAX = 12  # +12 dB = pontuação máxima de volume
 
 PALAVRAS_CHAT = [
-    "kkk", "kekw", "lul", "omegalul", "lmao", "rsrs", "hahaha", "mds",
-    "caralho", "nossa", "pog", "omg", "😂", "🤣", "💀",
+    "kkk",
+    "kekw",
+    "lul",
+    "omegalul",
+    "lmao",
+    "rsrs",
+    "hahaha",
+    "mds",
+    "caralho",
+    "nossa",
+    "pog",
+    "omg",
+    "😂",
+    "🤣",
+    "💀",
 ]
 
 # ---------------------------------------------------------------------
@@ -61,6 +74,13 @@ PALAVRAS_CHAT = [
 #  A cada N segundos, loga o maior score do período (0 = desliga).
 # ---------------------------------------------------------------------
 INTERVALO_LOG_SCORE = 15
+
+# ---------------------------------------------------------------------
+#  LOG (autoclipper.log com rotação)
+#  Ao chegar em LOG_MAX_MB, o arquivo vira .1, .2... e o mais antigo é apagado.
+# ---------------------------------------------------------------------
+LOG_MAX_MB = 5
+LOG_BACKUPS = 3
 
 # ---------------------------------------------------------------------
 #  CONFIGURAÇÃO LOCAL

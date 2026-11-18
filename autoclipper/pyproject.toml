@@ -1,0 +1,27 @@
+[project]
+name = "autoclipper"
+version = "1.0.0"
+description = "Gera clipes automáticos de lives da Twitch e do YouTube detectando risadas, gritos, explosões e picos no chat."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = "MIT"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["buffer", "videos"]
+
+[tool.ruff.lint]
+# E/W: estilo (pycodestyle) | F: erros (pyflakes) | I: ordem dos imports
+# B: bugs comuns (bugbear) | UP: sintaxe moderna | SIM: simplificações
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+ignore = [
+    "E402",    # main.py configura o TensorFlow antes dos imports de propósito
+    "SIM105",  # try/except/pass é mais legível que contextlib.suppress aqui
+]
+
+[tool.ruff.lint.per-file-ignores]
+"config.py" = ["F403"]  # from config_local import * é intencional
+
+[tool.ruff.format]
+quote-style = "double"
