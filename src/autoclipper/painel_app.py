@@ -228,4 +228,5 @@ with st.expander("⚙️ Configuração das lives (layout do vertical e câmera)
             )
         col_cam.caption(situacao)
 
-st.caption(f"Clipes: {config.PASTA_VERTICAL}  ·  Originais: {config.PASTA_ORIGINAIS}")
+originais = config.PASTA_ORIGINAIS if config.SALVAR_ORIGINAIS else "não são salvos"
+st.caption(f"Clipes: {config.PASTA_VERTICAL}  ·  Originais 16:9: {originais}")

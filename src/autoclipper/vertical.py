@@ -187,7 +187,6 @@ class FilaVertical:
         destino_vert = Path(config.PASTA_VERTICAL) / t.canal / t.nome
         destino_orig = Path(config.PASTA_ORIGINAIS) / t.canal / t.nome
         destino_vert.parent.mkdir(parents=True, exist_ok=True)
-        destino_orig.parent.mkdir(parents=True, exist_ok=True)
 
         ajustes = canais.obter(t.canal)
         layout = canais.layout_efetivo(t.canal)
@@ -195,11 +194,15 @@ class FilaVertical:
         ok = gerar_vertical(t.original_temp, temp_vert, layout, ajustes["camera"])
         if ok:
             shutil.move(str(temp_vert), str(destino_vert))
-        else:
-            clog.error(f"Vertical não gerado para {t.nome} (o original foi salvo mesmo assim).")
-
-        shutil.move(str(t.original_temp), str(destino_orig))
-        if ok:
             clog.info(f"CLIPE SALVO (layout {layout}): {destino_vert}")
-        clog.info(f"ORIGINAL SALVO: {destino_orig}")
+        else:
+            clog.error(f"Vertical não gerado para {t.nome} (o original foi salvo no lugar).")
+
+        # o original só é guardado se configurado - ou se o vertical falhou
+        if config.SALVAR_ORIGINAIS or not ok:
+            destino_orig.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(t.original_temp), str(destino_orig))
+            clog.info(f"ORIGINAL SALVO: {destino_orig}")
+        else:
+            t.original_temp.unlink(missing_ok=True)
         return ok

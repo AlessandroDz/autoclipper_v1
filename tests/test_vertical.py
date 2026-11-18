@@ -83,3 +83,48 @@ def test_arquivo_corrompido_nao_quebra(arquivo_canais):
 )
 def test_camera_valida(camera, valida):
     assert canais.camera_valida(camera) is valida
+
+
+# ---------------------------------------------------------------------
+#  destino dos arquivos (vertical sempre; original só se configurado)
+# ---------------------------------------------------------------------
+@pytest.fixture
+def ambiente_fila(tmp_path, monkeypatch, arquivo_canais):
+    monkeypatch.setattr(config, "PASTA_VERTICAL", str(tmp_path / "vertical"))
+    monkeypatch.setattr(config, "PASTA_ORIGINAIS", str(tmp_path / "originais"))
+    temp = tmp_path / "proc" / "orig_burn_2026-11-18_10-00-00_risada.mp4"
+    temp.parent.mkdir()
+    temp.write_bytes(b"original")
+    fila = vertical.FilaVertical.__new__(vertical.FilaVertical)  # sem a thread da fila
+    trabalho = vertical.Trabalho("burn", "burn_2026-11-18_10-00-00_risada.mp4", temp)
+    return fila, trabalho, tmp_path
+
+
+def _vertical_falso(ok):
+    def gerar(entrada, saida, layout, camera):
+        if ok:
+            saida.write_bytes(b"vertical")
+        return ok
+
+    return gerar
+
+
+@pytest.mark.parametrize("salvar_originais", [True, False])
+def test_vertical_e_original_conforme_configuracao(ambiente_fila, monkeypatch, salvar_originais):
+    fila, trabalho, tmp = ambiente_fila
+    monkeypatch.setattr(config, "SALVAR_ORIGINAIS", salvar_originais)
+    monkeypatch.setattr(vertical, "gerar_vertical", _vertical_falso(True))
+
+    assert fila._processar(trabalho)
+    assert (tmp / "vertical" / "burn" / trabalho.nome).read_bytes() == b"vertical"
+    assert (tmp / "originais" / "burn" / trabalho.nome).exists() is salvar_originais
+    assert not trabalho.original_temp.exists()  # temporário nunca fica para trás
+
+
+def test_original_salvo_se_o_vertical_falhar(ambiente_fila, monkeypatch):
+    fila, trabalho, tmp = ambiente_fila
+    monkeypatch.setattr(config, "SALVAR_ORIGINAIS", False)
+    monkeypatch.setattr(vertical, "gerar_vertical", _vertical_falso(False))
+
+    assert not fila._processar(trabalho)
+    assert (tmp / "originais" / "burn" / trabalho.nome).read_bytes() == b"original"

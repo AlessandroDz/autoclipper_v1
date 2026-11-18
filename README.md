@@ -122,6 +122,7 @@ O vertical e o original do mesmo momento têm o **mesmo nome**: `<canal>_<data>_
 | `FAIXA_TOPO_PX` / `CAMERA_PCT` | `200` / `0.30` | Faixa vazia do topo e altura da câmera no layout A |
 | `VERTICAL_FPS` / `VERTICAL_BITRATE` | `60` / `"10M"` | Qualidade do vertical |
 | `CODIFICADOR` | `"auto"` | `"auto"` (placa AMD se houver), `"amf"` ou `"cpu"` |
+| `SALVAR_ORIGINAIS` | `True` | `False` salva só o vertical (ocupa bem menos espaço). Se o vertical falhar, o original é salvo mesmo assim |
 | `PALAVRAS_CHAT` | `kkk, kekw, ...` | Palavras que indicam reação no chat |
 | `INTERVALO_LOG_SCORE` | `15` | Loga o maior score a cada N s, para calibrar (0 = desliga) |
 | `LOG_MAX_MB` / `LOG_BACKUPS` | `5` / `3` | Rotação do log |

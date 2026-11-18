@@ -31,6 +31,10 @@ PASTA_CLIPES = str(PASTA_BASE / "videos")
 PASTA_VERTICAL = ""
 PASTA_ORIGINAIS = ""
 
+# Salvar também o original 16:9? False = só o vertical (ocupa bem menos espaço).
+# Se o vertical falhar, o original é salvo mesmo assim, para não perder o momento.
+SALVAR_ORIGINAIS = True
+
 # Buffer temporário (pedaços de 10s das lives). NÃO coloque dentro do Drive.
 PASTA_BUFFER = str(PASTA_BASE / "buffer")
 
