@@ -1,4 +1,8 @@
-"""Ajustes de sistema compartilhados pelo terminal e pelo painel: log e PATH do ffmpeg."""
+"""Ajustes de sistema compartilhados pelo terminal e pelo painel.
+
+Log com rotação, PATH do ffmpeg e o "Job Object" do Windows que encerra os
+programas filhos (streamlink, yt-dlp, ffmpeg) quando o Auto-Clipper fecha.
+"""
 
 import logging
 import os
@@ -71,3 +75,74 @@ def garantir_ffmpeg() -> bool:
     if not shutil.which("ffmpeg"):
         recarregar_path_windows()
     return shutil.which("ffmpeg") is not None
+
+
+_job_handle = None  # mantido aberto enquanto o programa vive
+
+
+def encerrar_filhos_ao_fechar() -> bool:
+    """Coloca este processo num Job Object do Windows com KILL_ON_JOB_CLOSE.
+
+    Todo programa que ele abrir (streamlink, yt-dlp, ffmpeg) entra no mesmo job.
+    Quando o Auto-Clipper fecha - inclusive fechando a janela no X - o Windows
+    encerra todos eles juntos, sem deixar captura ou leitura de chat órfã.
+    """
+    global _job_handle
+    if sys.platform != "win32" or _job_handle is not None:
+        return _job_handle is not None
+    import ctypes
+    from ctypes import wintypes
+
+    class IO_COUNTERS(ctypes.Structure):
+        _fields_ = [(nome, ctypes.c_ulonglong) for nome in (
+            "ReadOperationCount", "WriteOperationCount", "OtherOperationCount",
+            "ReadTransferCount", "WriteTransferCount", "OtherTransferCount",
+        )]  # fmt: skip
+
+    class BASIC_LIMIT(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class EXTENDED_LIMIT(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", BASIC_LIMIT),
+            ("IoInfo", IO_COUNTERS),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    kill_on_job_close = 0x2000
+    extended_limit_information = 9
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateJobObjectW.restype = wintypes.HANDLE
+    k32.GetCurrentProcess.restype = wintypes.HANDLE
+    k32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD,
+    ]  # fmt: skip
+    k32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+
+    job = k32.CreateJobObjectW(None, None)
+    if not job:
+        return False
+    info = EXTENDED_LIMIT()
+    info.BasicLimitInformation.LimitFlags = kill_on_job_close
+    ok = k32.SetInformationJobObject(
+        job, extended_limit_information, ctypes.byref(info), ctypes.sizeof(info)
+    ) and k32.AssignProcessToJobObject(job, k32.GetCurrentProcess())
+    if not ok:
+        logging.getLogger("main").warning("Não consegui ativar o encerramento automático.")
+        k32.CloseHandle(job)
+        return False
+    _job_handle = job
+    return True

@@ -43,6 +43,10 @@ def main():
 
     from streamlit.web import cli as stcli
 
+    from .sistema import encerrar_filhos_ao_fechar
+
+    # fechar a janela do painel encerra também captura, chat e ffmpeg
+    encerrar_filhos_ao_fechar()
     app = Path(__file__).with_name("painel_app.py")
     threading.Thread(target=abrir_navegador_quando_pronto, daemon=True).start()
     print(f"Painel em {ENDERECO}  (feche esta janela para desligar o Auto-Clipper)")

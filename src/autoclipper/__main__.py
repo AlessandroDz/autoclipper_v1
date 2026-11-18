@@ -12,10 +12,11 @@ import time
 
 from . import config
 from .gerenciador import Gerenciador
-from .sistema import configurar_log, garantir_ffmpeg
+from .sistema import configurar_log, encerrar_filhos_ao_fechar, garantir_ffmpeg
 
 
 def main():
+    encerrar_filhos_ao_fechar()  # fechar a janela encerra também captura, chat e ffmpeg
     configurar_log()
     log = logging.getLogger("main")
 
