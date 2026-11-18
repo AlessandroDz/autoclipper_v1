@@ -1,11 +1,9 @@
 # Auto-Clipper de Lives (Twitch + YouTube)
 
-Monitora lives da **Twitch** e do **YouTube** em tempo real e, quando detecta um momento marcante — **risada, grito, explosão no jogo, fala mais alta ou pico no chat** — gera automaticamente um clipe de **3 minutos** (1 min antes + 2 min depois do momento), pronto para virar Reels, TikTok ou Shorts.
+Monitora lives da **Twitch** e do **YouTube** em tempo real e, quando detecta um momento marcante — **risada, grito, explosão no jogo, fala mais alta ou pico no chat** — gera automaticamente um clipe de **3 minutos** (1 min antes + 2 min depois do momento) já no **formato vertical 9:16**, pronto para Reels, TikTok e Shorts. Tudo controlado por um **painel no navegador**.
 
 Feito para lives de GTA em português, mas funciona com qualquer live.
 
-> **Status:** v1 — captura, detecção e corte funcionando em lives reais. Calibração da sensibilidade em andamento. Formato vertical e painel estão no [roadmap](#roadmap).
->
 > Tudo roda **100% local**, sem serviços pagos nem chaves de API.
 
 ---
@@ -15,35 +13,50 @@ Feito para lives de GTA em português, mas funciona com qualquer live.
 ```
 streamlink ──► ffmpeg ─┬─► buffer de pedaços de 10 s (23 min, sem recodificar)
                        └─► áudio 16 kHz ──► YAMNet + volume ──┐
-chat (Twitch IRC / YouTube via yt-dlp) ──► ritmo de mensagens ─┴─► score (1x/s) ──► clipe
+chat (Twitch IRC / YouTube via yt-dlp) ──► ritmo de mensagens ─┴─► score (1x/s)
+                                                                       │
+            original 16:9 (corte sem recodificar) ◄── clipe ◄──────────┘
+                     │
+                     └─► fila ──► vertical 1080×1920 (placa AMD ou processador)
 ```
 
 1. Cada live roda em sua própria thread. O vídeo é gravado em pedaços de 10 s num buffer circular, **sem recodificar** (`-c copy`), então quase não usa CPU.
 2. A cada segundo o áudio é analisado pelo **[YAMNet](https://tfhub.dev/google/yamnet/1)** (modelo do Google que reconhece 521 tipos de som), rodando na CPU.
 3. O volume é comparado com a **média do próprio streamer** (últimos 2 min), não com um valor fixo.
 4. O chat é lido em paralelo: um pico de mensagens (ou muitas com `kkk`, `kekw`, `💀`...) aumenta o score.
-5. Quando o score passa do limiar, os pedaços do buffer são juntados num `.mp4`.
+5. Quando o score passa do limiar, os pedaços do buffer viram o **original 16:9**, e uma **fila** (um clipe por vez, para não atrapalhar a captura) gera o **vertical**.
 
 ### Score de detecção
 
 ```
 evento    = maior probabilidade YAMNet entre {risada, grito, explosão}
-volume    = 0 em +6 dB acima da média → 1 em +12 dB
+volume    = 0 em +5 dB acima da média → 1 em +10 dB
 chat      = 0 em 1,5x o ritmo normal → 1 em 4x (+0,3 se ≥30% das msgs têm palavras-chave)
 
-score = 0,6·evento + 0,2·volume + 0,3·chat        → dispara se score ≥ 0,55
+score = 0,6·evento + 0,2·volume + 0,3·chat        → dispara se score ≥ 0,45
 ```
 
-- Uma risada forte sozinha já dispara; volume + chat sem nenhum evento, não.
 - Se **música** dominar o áudio, o evento é penalizado e o volume ignorado (evita falso positivo).
-- Enquanto um clipe está sendo gravado, novas flags são ignoradas (cooldown).
-- **Corte forçado:** se passar 20 min sem nenhum clipe, corta o melhor momento do período.
+- Enquanto um clipe automático está sendo gravado, novas flags automáticas são ignoradas (cooldown). O **clipe manual** sempre gera.
+- **Corte por tempo:** se passar 15 min sem nenhum clipe, corta o melhor momento do período (sai com o motivo `auto-por-tempo` no nome).
+
+### Formato vertical (1080×1920, 60 fps)
+
+| Layout | Como fica | Quando usar |
+|---|---|---|
+| **A** | Faixa vazia no topo (200 px, para escrever o título no app) · gameplay no meio (centro da live) · **câmera do streamer embaixo (30%)** | Streamer com câmera |
+| **C** | Vídeo inteiro no centro, com o próprio vídeo **desfocado** no fundo | Sem câmera, ou câmera ainda não marcada |
+
+O layout é escolhido **por canal** no painel. A posição da câmera é marcada uma vez: o painel pega um quadro da live e você arrasta um retângulo em cima da câmera. Um canal em A sem câmera marcada sai em C automaticamente.
+
+A codificação usa a **placa de vídeo AMD (AMF)** quando disponível — bem mais rápida e quase sem uso de processador — e cai para o processador (`libx264`) se a placa falhar.
 
 ### Robustez
 
 - Reconecta sozinho se a live cair ou estiver offline (tenta a cada 30 s).
 - Watchdog: 60 s sem áudio → reinicia a captura.
-- O clipe é gerado fora da pasta final e só depois movido (seguro para pastas sincronizadas como Google Drive).
+- Os arquivos são gerados fora da pasta final e só depois movidos (seguro para pastas sincronizadas como Google Drive).
+- Depois de uma pausa, um clipe nunca junta trechos de antes e depois da pausa.
 
 ---
 
@@ -52,7 +65,7 @@ score = 0,6·evento + 0,2·volume + 0,3·chat        → dispara se score ≥ 0,
 - Windows 10/11 (testado no Windows 11)
 - **Python 3.10 a 3.12** (o TensorFlow ainda não suporta versões mais novas)
 - **ffmpeg**
-- Não precisa de GPU
+- Placa de vídeo AMD é opcional (acelera o vertical)
 
 ## Instalação
 
@@ -72,7 +85,7 @@ O `-e` instala o pacote em modo editável: mudanças no código valem sem reinst
 
 ## Configuração
 
-Os valores padrão ficam em [`src/autoclipper/config.py`](src/autoclipper/config.py). Seus dados (links das lives e pasta dos clipes) vão num arquivo **`config_local.py`**, que fica fora do Git. Crie-o na raiz do projeto:
+Os valores padrão ficam em [`src/autoclipper/config.py`](src/autoclipper/config.py). Seus dados (links das lives e pastas) vão num arquivo **`config_local.py`**, que fica fora do Git. Crie-o na raiz do projeto:
 
 ```python
 # config_local.py — qualquer valor aqui substitui o de config.py
@@ -81,39 +94,79 @@ LINKS_DAS_LIVES = [
     "https://www.youtube.com/live/ID_DO_VIDEO",
 ]
 
-PASTA_CLIPES = r"G:\Meu Drive\videos"  # Google Drive para desktop → acesso pelo celular
+PASTA_CLIPES = r"G:\Meu Drive\Clipes"  # Google Drive para desktop → acesso pelo celular
+
+# originais 16:9: padrão é <PASTA_CLIPES>\originais; para salvar no PC:
+# PASTA_ORIGINAIS = r"C:\clipes\originais"
 ```
 
-Sem `config_local.py`, os clipes vão para a pasta `videos` dentro do projeto.
+Estrutura gerada:
 
-**Google Drive (opcional):** instale o [Google Drive para desktop](https://www.google.com/drive/download/) (`winget install Google.GoogleDrive`), faça login e aponte `PASTA_CLIPES` para uma pasta dentro de `G:\Meu Drive`. O clipe é gerado fora do Drive e só movido quando está pronto, então o Drive nunca sincroniza um arquivo pela metade.
+```
+<PASTA_CLIPES>\
+├── vertical\<canal>\    ← 9:16 para postar
+└── originais\<canal>\   ← 16:9 na qualidade da live (sem recodificar)
+```
+
+O vertical e o original do mesmo momento têm o **mesmo nome**: `<canal>_<data>_<hora>_<motivo>.mp4`, onde o motivo é `risada`, `grito`, `explosao`, `volume`, `chat`, `manual` ou `auto-por-tempo`.
+
+**Google Drive (opcional):** instale o [Google Drive para desktop](https://www.google.com/drive/download/) (`winget install Google.GoogleDrive`), faça login e aponte `PASTA_CLIPES` para uma pasta dentro de `G:\Meu Drive`.
 
 | Parâmetro | Padrão | O que faz |
 |---|---|---|
-| `LIMIAR_SCORE` | `0.55` | Sensibilidade. Muito clipe ruim → aumente (0.65). Pouco clipe → diminua (0.45) |
+| `LIMIAR_SCORE` | `0.45` | Sensibilidade. Muito clipe ruim → aumente (0.55). Pouco clipe → diminua (0.40) |
 | `SEGUNDOS_ANTES` / `SEGUNDOS_DEPOIS` | `60` / `120` | Duração do clipe em volta do momento |
-| `CORTE_FORCADO_MINUTOS` | `20` | Tempo máximo sem clipe antes do corte forçado |
+| `CORTE_FORCADO_MINUTOS` | `15` | Tempo máximo sem clipe antes do corte por tempo |
 | `QUALIDADE` | `"best"` | Qualidade da captura (`"720p60"` alivia disco e banda) |
+| `LAYOUT_PADRAO` | `"A"` | Layout dos canais novos |
+| `FAIXA_TOPO_PX` / `CAMERA_PCT` | `200` / `0.30` | Faixa vazia do topo e altura da câmera no layout A |
+| `VERTICAL_FPS` / `VERTICAL_BITRATE` | `60` / `"10M"` | Qualidade do vertical |
+| `CODIFICADOR` | `"auto"` | `"auto"` (placa AMD se houver), `"amf"` ou `"cpu"` |
 | `PALAVRAS_CHAT` | `kkk, kekw, ...` | Palavras que indicam reação no chat |
 | `INTERVALO_LOG_SCORE` | `15` | Loga o maior score a cada N s, para calibrar (0 = desliga) |
-| `LOG_MAX_MB` / `LOG_BACKUPS` | `5` / `3` | Rotação do log: ao chegar em 5 MB vira `.1`, `.2`, `.3` e o mais antigo é apagado |
+| `LOG_MAX_MB` / `LOG_BACKUPS` | `5` / `3` | Rotação do log |
 
 ## Uso
 
-Na raiz do projeto:
+### Painel (recomendado)
+
+Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe -m autoclipper.painel`). O painel abre no navegador em `http://localhost:8501`. A janela preta que abre junto é o motor: **minimize, não feche** — fechar desliga o Auto-Clipper.
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ 🎬 Auto-Clipper                 [▶ Iniciar todas] [⏹ Finalizar todas] │
+│ Lives ativas 3 de 3 · Clipes hoje 7 · Espaço livre · Na fila   │
+├────────────────────────────────────────────────────────────────┤
+│ burn · Twitch     🟢 Ao vivo         [✂ Clipar] [⏸ Pausar] [⏹]  │
+│ rodil · Twitch    ⏸ Pausada          [▶ Retomar] [⏹ Finalizar]  │
+├────────────────────────────────────────────────────────────────┤
+│ Últimos clipes: hora · canal · motivo · score · [▶] [📁]        │
+│ 🗑 Apagar clipes com mais de N dias                             │
+│ ⚙ Configuração: layout A/C por canal · [🎯 Marcar câmera]       │
+└────────────────────────────────────────────────────────────────┘
+```
+
+| Botão | O que faz |
+|---|---|
+| **Clipar** | Clipe manual: 1 min antes + 2 min depois do clique. Sempre gera, mesmo com outro clipe em andamento |
+| **Pausar** | Desliga captura, análise e chat daquela live (zero CPU e banda) até **Retomar** |
+| **Finalizar** | Desconecta e apaga o buffer daquela live |
+| **Apagar clipes antigos** | Mostra quantos arquivos (vertical + original) serão apagados e pede confirmação |
+| **Marcar câmera** | Abre um quadro da live numa janela: arraste o retângulo sobre a câmera e aperte ENTER |
+
+### Terminal
 
 ```powershell
 .\.venv\Scripts\python.exe -m autoclipper
 ```
 
-Com o venv ativado (`.\.venv\Scripts\Activate.ps1`), basta `autoclipper`. `Ctrl+C` para parar. No terminal (e em `autoclipper.log`):
+Inicia todas as lives; `Ctrl+C` para parar. O log fica em `autoclipper.log`:
 
 ```
-23:30:12 [canal] FLAG! motivo=risada score=0.62 momento=23:30:02 - gerando clipe...
-23:32:19 [canal] CLIPE SALVO: ...\canal\canal_2026-11-17_23-30-02_risada.mp4
+21:30:12 [canal] FLAG! motivo=risada score=0.62 momento=21:30:02 - gerando clipe...
+21:32:19 [canal] Clipe cortado, na fila do vertical: canal_2026-11-18_21-30-02_risada.mp4
+21:33:40 [canal] CLIPE SALVO (layout A): ...\vertical\canal\canal_2026-11-18_21-30-02_risada.mp4
 ```
-
-Os clipes ficam em `PASTA_CLIPES\<canal>\<canal>_<data-hora>_<motivo>.mp4`, onde o motivo é `risada`, `grito`, `explosao`, `volume`, `chat` ou `forcado`.
 
 ### Calibrando
 
@@ -131,14 +184,23 @@ Compare com os momentos que você achou bons na live e ajuste `LIMIAR_SCORE`.
 
 ```
 src/autoclipper/
-├── __main__.py     # ponto de entrada (python -m autoclipper) + log com rotação
-├── config.py       # valores padrão de todos os parâmetros
-├── monitor.py      # MonitorLive: captura, buffer, análise, clipe e limpeza (iniciar()/parar())
-├── detector.py     # DetectorAudio (YAMNet) + volume em dB
-└── chat.py         # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
-tests/              # testes automatizados (pytest)
-config_local.py     # seus links e pastas (fora do Git)
-pyproject.toml      # metadados, dependências e configuração do Ruff e do pytest
+├── __main__.py       # modo terminal (python -m autoclipper)
+├── painel.py         # abre o painel (python -m autoclipper.painel)
+├── painel_app.py     # página do painel (Streamlit)
+├── gerenciador.py    # comandos e status de todas as lives (usado pelo painel e terminal)
+├── monitor.py        # MonitorLive: captura, buffer, análise, pausa, clipe manual
+├── vertical.py       # layouts 9:16, codificador (AMF/CPU) e fila de processamento
+├── canais.py         # layout e câmera por canal (canais.json)
+├── marcar_camera.py  # janela para marcar a câmera do streamer
+├── detector.py       # DetectorAudio (YAMNet) + volume em dB
+├── chat.py           # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
+├── sistema.py        # log com rotação e PATH do ffmpeg
+└── config.py         # valores padrão de todos os parâmetros
+tests/                # testes automatizados (pytest)
+Abrir painel.bat      # atalho de dois cliques para o painel
+config_local.py       # seus links e pastas (fora do Git)
+canais.json           # layout e câmera por canal, gravado pelo painel (fora do Git)
+pyproject.toml        # metadados, dependências e configuração do Ruff e do pytest
 ```
 
 ## Desenvolvimento
@@ -155,29 +217,30 @@ Instale as ferramentas de desenvolvimento ([Ruff](https://docs.astral.sh/ruff/) 
 .\.venv\Scripts\python.exe -m ruff format .     # formatação
 ```
 
-Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura dos links, o parser do chat do YouTube, o score do chat, o cálculo de volume e o carregamento do `config_local.py`.
+Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura dos links, o parser do chat do YouTube, o score do chat, o cálculo de volume, o `config_local.py`, os filtros dos layouts A e C, os ajustes por canal, os nomes dos clipes, a seleção de trechos depois de uma pausa e a limpeza de clipes antigos.
 
 ## Stack
 
 | Função | Ferramenta |
 |---|---|
 | Captura da live | [streamlink](https://streamlink.github.io/) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) |
-| Buffer e corte | [ffmpeg](https://ffmpeg.org/) |
+| Buffer, corte e vertical | [ffmpeg](https://ffmpeg.org/) (AMD AMF ou libx264) |
 | Detecção de áudio | [YAMNet](https://tfhub.dev/google/yamnet/1) (TensorFlow Hub) |
 | Chat Twitch | IRC anônimo (`irc.chat.twitch.tv`) |
 | Chat YouTube | yt-dlp (`--sub-langs live_chat`) |
+| Painel | [Streamlit](https://streamlit.io/) |
+| Marcar câmera | [OpenCV](https://opencv.org/) |
 
 ---
 
 ## Roadmap
 
-- **v2 — Vertical 9:16 (1080×1920):** layout dividido (gameplay em cima, câmera do streamer embaixo, posição da câmera configurável por canal) ou, sem câmera, o vídeo inteiro centralizado com fundo desfocado. Corte preciso com recodificação.
-- **v3 — Painel Streamlit:** Start/Stop por live, status, layout e idioma por canal, lista dos últimos clipes.
+- **Acesso pelo celular de qualquer lugar:** painel via [Tailscale](https://tailscale.com/) + início automático com o Windows.
 
 ## Observações
 
 - **Direitos autorais:** postar clipes de outros criadores pode gerar strike. Tenha permissão do streamer ou participe de um programa oficial de clipes.
-- **Desempenho:** 2 lives rodam tranquilo na CPU. Cada live usa ~2 GB de disco de buffer.
+- **Desempenho:** cada live usa ~2 GB de disco de buffer. Cada clipe gera ~225 MB (vertical) + ~135 MB (original).
 - YouTube muda com frequência: se a captura ou o chat pararem, atualize com `pip install -U yt-dlp streamlink`.
 
 ## Licença
