@@ -35,9 +35,22 @@ def abrir_navegador_quando_pronto(limite_s: float = 90) -> None:
     print(f"O painel demorou para subir. Abra manualmente: {ENDERECO}")
 
 
+def publicar_no_celular() -> None:
+    from . import config, remoto
+
+    if not config.ACESSO_REMOTO:
+        return
+    endereco = remoto.publicar_painel(PORTA, config.PORTA_REMOTA)
+    if endereco:
+        print(f"Pelo celular (app Tailscale ligado): {endereco}")
+    else:
+        print("Acesso pelo celular indisponível agora (veja o autoclipper.log).")
+
+
 def main():
     if painel_no_ar():
         print(f"O painel já está aberto: abrindo {ENDERECO} no navegador.")
+        publicar_no_celular()
         webbrowser.open(ENDERECO)
         return
 
@@ -50,6 +63,7 @@ def main():
     app = Path(__file__).with_name("painel_app.py")
     threading.Thread(target=abrir_navegador_quando_pronto, daemon=True).start()
     print(f"Painel em {ENDERECO}  (feche esta janela para desligar o Auto-Clipper)")
+    publicar_no_celular()
     # fmt: off
     sys.argv = [
         "streamlit", "run", str(app),

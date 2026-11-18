@@ -109,6 +109,15 @@ LOG_MAX_MB = 5
 LOG_BACKUPS = 3
 
 # ---------------------------------------------------------------------
+#  ACESSO PELO CELULAR (Tailscale)
+#  True = ao abrir o painel, ele é publicado na sua rede Tailscale
+#  (tailscale serve). Só os aparelhos logados na sua conta Tailscale
+#  conseguem abrir; nada fica exposto na internet.
+# ---------------------------------------------------------------------
+ACESSO_REMOTO = False
+PORTA_REMOTA = 80  # porta do endereço na rede Tailscale (80 = link sem ":porta")
+
+# ---------------------------------------------------------------------
 #  CONFIGURAÇÃO LOCAL
 #  config_local.py (fora do Git) na raiz do projeto: os valores em
 #  MAIÚSCULAS definidos lá substituem os daqui.

@@ -127,6 +127,7 @@ O vertical e o original do mesmo momento têm o **mesmo nome**: `<canal>_<data>_
 | `PALAVRAS_CHAT` | `kkk, kekw, ...` | Palavras que indicam reação no chat |
 | `INTERVALO_LOG_SCORE` | `15` | Loga o maior score a cada N s, para calibrar (0 = desliga) |
 | `LOG_MAX_MB` / `LOG_BACKUPS` | `5` / `3` | Rotação do log |
+| `ACESSO_REMOTO` | `False` | `True` publica o painel na sua rede Tailscale (acesso pelo celular) |
 
 ## Uso
 
@@ -157,6 +158,19 @@ Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe 
 | **Finalizar** | Desconecta e apaga o buffer daquela live |
 | **Apagar clipes antigos** | Mostra quantos arquivos (vertical + original) serão apagados e pede confirmação |
 | **Marcar câmera** | Abre um quadro da live numa janela: arraste o retângulo sobre a câmera e aperte ENTER |
+
+### Pelo celular (Tailscale)
+
+O painel pode ser controlado do celular, de qualquer lugar, sem abrir nada na internet: o [Tailscale](https://tailscale.com/) cria uma rede privada entre os seus aparelhos, e só eles enxergam o painel.
+
+1. Instale o Tailscale no PC (`winget install Tailscale.Tailscale`) e no celular (App Store / Play Store) e entre com **a mesma conta** nos dois.
+2. No `config_local.py`, coloque `ACESSO_REMOTO = True`.
+3. Abra o painel pelo atalho. Ele roda `tailscale serve` e mostra o endereço no rodapé, algo como `http://seu-pc.tailXXXX.ts.net`.
+4. No celular, ligue o app Tailscale e abra esse endereço no navegador (dá para salvar na tela de início).
+
+O painel continua escutando só em `localhost`; o Tailscale repassa o acesso apenas para os aparelhos da sua conta (`tailnet only`), com o tráfego criptografado. Para desligar a publicação: `tailscale serve reset`.
+
+> O PC precisa ficar ligado e sem suspender. **Encerrar tudo** pelo celular desliga o painel, e ele só volta abrindo o atalho no PC. Os botões ▶ e 📁 dos clipes abrem o arquivo na tela do PC; para ver o clipe no celular, use o app do Google Drive.
 
 ### Terminal
 
@@ -198,6 +212,7 @@ src/autoclipper/
 ├── marcar_camera.py  # janela para marcar a câmera do streamer
 ├── detector.py       # DetectorAudio (YAMNet) + volume em dB
 ├── chat.py           # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
+├── remoto.py         # publica o painel na rede Tailscale (acesso pelo celular)
 ├── sistema.py        # log com rotação e PATH do ffmpeg
 └── config.py         # valores padrão de todos os parâmetros
 tests/                # testes automatizados (pytest)
@@ -221,7 +236,7 @@ Instale as ferramentas de desenvolvimento ([Ruff](https://docs.astral.sh/ruff/) 
 .\.venv\Scripts\python.exe -m ruff format .     # formatação
 ```
 
-Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura dos links, o parser do chat do YouTube, o score do chat, o cálculo de volume, o `config_local.py`, os filtros dos layouts A e C, os ajustes por canal, os nomes dos clipes, a seleção de trechos depois de uma pausa e a limpeza de clipes antigos.
+Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura dos links, o parser do chat do YouTube, o score do chat, o cálculo de volume, o `config_local.py`, os filtros dos layouts A e C, os ajustes por canal, os nomes dos clipes, a seleção de trechos depois de uma pausa, a limpeza de clipes antigos e a publicação no Tailscale.
 
 ## Stack
 
@@ -234,12 +249,13 @@ Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura d
 | Chat YouTube | yt-dlp (`--sub-langs live_chat`) |
 | Painel | [Streamlit](https://streamlit.io/) |
 | Marcar câmera | [OpenCV](https://opencv.org/) |
+| Acesso pelo celular | [Tailscale](https://tailscale.com/) (`tailscale serve`) |
 
 ---
 
 ## Roadmap
 
-- **Acesso pelo celular de qualquer lugar:** painel via [Tailscale](https://tailscale.com/) + início automático com o Windows.
+- **Início automático com o Windows:** o painel sobe sozinho quando o PC liga, para poder religar tudo pelo celular.
 
 ## Observações
 

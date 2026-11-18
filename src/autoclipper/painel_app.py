@@ -49,6 +49,13 @@ def motor() -> Gerenciador:
     return Gerenciador()
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def endereco_celular() -> str | None:
+    from autoclipper import remoto
+
+    return remoto.endereco_remoto(config.PORTA_REMOTA)
+
+
 def abrir_arquivo(caminho):
     if sys.platform == "win32":
         os.startfile(caminho)  # abre no player padrão do Windows
@@ -145,6 +152,11 @@ if st.session_state.get("confirmar_encerrar"):
         st.warning(
             "**Encerrar tudo?** As lives são finalizadas, os clipes pendentes "
             f"({pendentes}) são terminados e o painel fecha."
+            + (
+                " **Pelo celular não dá para religar depois:** só abrindo o atalho no PC."
+                if config.ACESSO_REMOTO
+                else ""
+            )
         )
         sim, nao = st.columns(2)
         if sim.button("Sim, encerrar tudo", type="primary", use_container_width=True):
@@ -313,3 +325,10 @@ with st.expander("⚙️ Configuração das lives (layout do vertical e câmera)
 
 originais = config.PASTA_ORIGINAIS if config.SALVAR_ORIGINAIS else "não são salvos"
 st.caption(f"Clipes: {config.PASTA_VERTICAL}  ·  Originais 16:9: {originais}")
+if config.ACESSO_REMOTO:
+    remoto_url = endereco_celular()
+    st.caption(
+        f"📱 Pelo celular (app Tailscale ligado): {remoto_url}"
+        if remoto_url
+        else "📱 Acesso pelo celular indisponível (Tailscale desligado?)"
+    )
