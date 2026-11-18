@@ -2,6 +2,7 @@
 .venv/
 venv/
 __pycache__/
+.ruff_cache/
 *.py[cod]
 
 # Buffer das lives e clipes gerados

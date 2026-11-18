@@ -79,7 +79,7 @@ LINKS_DAS_LIVES = [
     "https://www.youtube.com/live/ID_DO_VIDEO",
 ]
 
-PASTA_CLIPES = r"G:\Meu Drive\videos"   # Google Drive para desktop → acesso pelo celular
+PASTA_CLIPES = r"G:\Meu Drive\videos"  # Google Drive para desktop → acesso pelo celular
 ```
 
 Sem `config_local.py`, os clipes vão para a pasta `videos` dentro do projeto.
