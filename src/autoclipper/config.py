@@ -1,26 +1,32 @@
 # =====================================================================
 #                    CONFIGURAÇÃO DO AUTO-CLIPPER (v1)
+#
+#  Valores padrão. NÃO edite aqui: crie um config_local.py na pasta de
+#  onde você roda o programa (a raiz do projeto) com seus links e pastas.
+#  Qualquer valor definido lá substitui o daqui (ver o fim do arquivo).
 # =====================================================================
+import importlib.util
 from pathlib import Path
 
+# Pasta de onde o programa é executado (raiz do projeto)
+PASTA_BASE = Path.cwd()
+
 # ---------------------------------------------------------------------
-#  >>> LINKS DAS LIVES <<<   (Twitch ou YouTube, um por linha)
+#  >>> LINKS DAS LIVES <<<   (Twitch ou YouTube) - defina no config_local.py
+#  Ex.: ["https://www.twitch.tv/CANAL", "https://www.youtube.com/live/ID_DO_VIDEO"]
 # ---------------------------------------------------------------------
-LINKS_DAS_LIVES = [
-    "https://www.twitch.tv/CANAL",
-    "https://www.youtube.com/live/ID_DO_VIDEO",
-]
+LINKS_DAS_LIVES: list[str] = []
 
 # ---------------------------------------------------------------------
 #  PASTAS
 # ---------------------------------------------------------------------
-# Onde os clipes finais são salvos (padrão: pasta "videos" dentro do projeto).
+# Onde os clipes finais são salvos (padrão: pasta "videos" na raiz do projeto).
 # Para acessar pelo celular, aponte para o Google Drive para desktop,
 # ex.: r"G:\Meu Drive\Clipes"
-PASTA_CLIPES = str(Path(__file__).parent / "videos")
+PASTA_CLIPES = str(PASTA_BASE / "videos")
 
 # Buffer temporário (pedaços de 10s das lives). NÃO coloque dentro do Drive.
-PASTA_BUFFER = str(Path(__file__).parent / "buffer")
+PASTA_BUFFER = str(PASTA_BASE / "buffer")
 
 # ---------------------------------------------------------------------
 #  CLIPE
@@ -84,10 +90,21 @@ LOG_BACKUPS = 3
 
 # ---------------------------------------------------------------------
 #  CONFIGURAÇÃO LOCAL
-#  Crie um config_local.py (fica fora do Git) com seus links e pastas;
-#  qualquer valor definido lá substitui o daqui.
+#  config_local.py (fora do Git) na raiz do projeto: os valores em
+#  MAIÚSCULAS definidos lá substituem os daqui.
 # ---------------------------------------------------------------------
-try:
-    from config_local import *  # noqa: F401,F403
-except ImportError:
-    pass
+ARQUIVO_CONFIG_LOCAL = PASTA_BASE / "config_local.py"
+
+
+def _carregar_config_local(caminho: Path) -> None:
+    if not caminho.is_file():
+        return
+    spec = importlib.util.spec_from_file_location("config_local", caminho)
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    for nome, valor in vars(modulo).items():
+        if nome.isupper():
+            globals()[nome] = valor
+
+
+_carregar_config_local(ARQUIVO_CONFIG_LOCAL)

@@ -61,16 +61,18 @@ winget install Python.Python.3.12
 winget install Gyan.FFmpeg
 ```
 
-Feche e abra o terminal, depois, na pasta do projeto:
+Feche e abra o terminal, depois, na raiz do projeto:
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -e .
 ```
+
+O `-e` instala o pacote em modo editável: mudanças no código valem sem reinstalar.
 
 ## Configuração
 
-Os valores padrão ficam em [`config.py`](config.py). Seus dados (links das lives e pasta dos clipes) vão num arquivo **`config_local.py`**, que fica fora do Git. Crie-o na pasta do projeto:
+Os valores padrão ficam em [`src/autoclipper/config.py`](src/autoclipper/config.py). Seus dados (links das lives e pasta dos clipes) vão num arquivo **`config_local.py`**, que fica fora do Git. Crie-o na raiz do projeto:
 
 ```python
 # config_local.py — qualquer valor aqui substitui o de config.py
@@ -98,11 +100,13 @@ Sem `config_local.py`, os clipes vão para a pasta `videos` dentro do projeto.
 
 ## Uso
 
+Na raiz do projeto:
+
 ```powershell
-.\.venv\Scripts\python.exe main.py
+.\.venv\Scripts\python.exe -m autoclipper
 ```
 
-`Ctrl+C` para parar. No terminal (e em `autoclipper.log`):
+Com o venv ativado (`.\.venv\Scripts\Activate.ps1`), basta `autoclipper`. `Ctrl+C` para parar. No terminal (e em `autoclipper.log`):
 
 ```
 23:30:12 [canal] FLAG! motivo=risada score=0.62 momento=23:30:02 - gerando clipe...
@@ -126,24 +130,32 @@ Compare com os momentos que você achou bons na live e ajuste `LIMIAR_SCORE`.
 ## Estrutura
 
 ```
-config.py         # valores padrão de todos os parâmetros
-config_local.py   # seus links e pastas (fora do Git)
-main.py           # ponto de entrada + log com rotação
-monitor.py        # MonitorLive: captura, buffer, análise, clipe e limpeza (iniciar()/parar())
-detector.py       # DetectorAudio (YAMNet) + volume em dB
-chat.py           # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
-pyproject.toml    # metadados do projeto + configuração do Ruff
+src/autoclipper/
+├── __main__.py     # ponto de entrada (python -m autoclipper) + log com rotação
+├── config.py       # valores padrão de todos os parâmetros
+├── monitor.py      # MonitorLive: captura, buffer, análise, clipe e limpeza (iniciar()/parar())
+├── detector.py     # DetectorAudio (YAMNet) + volume em dB
+└── chat.py         # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
+tests/              # testes automatizados (pytest)
+config_local.py     # seus links e pastas (fora do Git)
+pyproject.toml      # metadados, dependências e configuração do Ruff e do pytest
 ```
 
 ## Desenvolvimento
 
-O código segue o padrão do **[Ruff](https://docs.astral.sh/ruff/)** (lint + formatação, configurado no `pyproject.toml`):
+Instale as ferramentas de desenvolvimento ([Ruff](https://docs.astral.sh/ruff/) e [pytest](https://docs.pytest.org/)):
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m ruff check .
-.\.venv\Scripts\python.exe -m ruff format .
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 ```
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest            # testes
+.\.venv\Scripts\python.exe -m ruff check .      # lint
+.\.venv\Scripts\python.exe -m ruff format .     # formatação
+```
+
+Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura dos links, o parser do chat do YouTube, o score do chat, o cálculo de volume e o carregamento do `config_local.py`.
 
 ## Stack
 

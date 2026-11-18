@@ -14,9 +14,9 @@ from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
-import config
-from chat import LeitorChat
-from detector import rms_db
+from . import config
+from .chat import LeitorChat
+from .detector import rms_db
 
 TAXA = 16000  # Hz do áudio de análise
 BYTES_POR_SEG = TAXA * 2  # int16 mono

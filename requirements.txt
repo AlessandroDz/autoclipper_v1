@@ -1,6 +1,0 @@
-streamlink
-yt-dlp
-numpy
-tensorflow
-tensorflow-hub
-setuptools<81  # tensorflow-hub ainda usa pkg_resources

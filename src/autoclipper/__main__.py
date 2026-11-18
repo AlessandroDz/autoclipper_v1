@@ -1,4 +1,4 @@
-"""Auto-clipper v1 - rode com:  python main.py   (Ctrl+C para parar)"""
+"""Ponto de entrada. Rode da raiz do projeto com:  python -m autoclipper   (Ctrl+C para parar)"""
 
 import os
 import warnings
@@ -14,8 +14,8 @@ import sys
 import time
 from logging.handlers import RotatingFileHandler
 
-import config
-from monitor import MonitorLive
+from . import config
+from .monitor import MonitorLive
 
 
 def configurar_log():
@@ -76,11 +76,14 @@ def main():
 
     links = [link for link in config.LINKS_DAS_LIVES if link.strip()]
     if not links:
-        log.error("Coloque pelo menos um link em LINKS_DAS_LIVES (config.py).")
+        log.error(
+            f"Nenhuma live configurada. Coloque os links em LINKS_DAS_LIVES "
+            f"no arquivo {config.ARQUIVO_CONFIG_LOCAL} (veja o README)."
+        )
         return
 
     log.info("Carregando modelo de áudio (YAMNet)...")
-    from detector import DetectorAudio
+    from .detector import DetectorAudio
 
     detector = DetectorAudio()
 

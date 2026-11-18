@@ -3,6 +3,10 @@
 venv/
 __pycache__/
 .ruff_cache/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
 *.py[cod]
 
 # Buffer das lives e clipes gerados

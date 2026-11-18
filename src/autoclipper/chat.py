@@ -11,7 +11,7 @@ import time
 from collections import deque
 from pathlib import Path
 
-import config
+from . import config
 
 
 def _textos_chat_youtube(linha: str):
