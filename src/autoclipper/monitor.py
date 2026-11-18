@@ -251,7 +251,7 @@ class MonitorLive:
             candidatos = [h for h in self.hist_score if h[0] >= minimo]
             if candidatos:
                 t, s, _ = max(candidatos, key=lambda h: h[1])
-                self._disparar(t, "forcado", s)
+                self._disparar(t, config.MOTIVO_POR_TEMPO, s)
             else:
                 self.ultimo_corte = agora
 

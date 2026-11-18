@@ -35,7 +35,8 @@ SEGUNDOS_ANTES = 60  # 1 min antes da flag
 SEGUNDOS_DEPOIS = 120  # 2 min depois da flag
 DURACAO_SEGMENTO = 10  # tamanho de cada pedaço do buffer (s)
 BUFFER_MINUTOS = 23  # quanto tempo de live fica guardado
-CORTE_FORCADO_MINUTOS = 20  # se ficar esse tempo sem clipe, corta o melhor momento
+CORTE_FORCADO_MINUTOS = 15  # se ficar esse tempo sem clipe, corta o melhor momento
+MOTIVO_POR_TEMPO = "auto-por-tempo"  # vai no nome do clipe gerado pelo corte por tempo
 
 # Qualidade da captura: "best", "1080p60", "720p60", "720p"...
 QUALIDADE = "best"
@@ -45,17 +46,17 @@ USAR_YTDLP_NO_YOUTUBE = False
 
 # ---------------------------------------------------------------------
 #  DETECÇÃO (dispara quando score >= LIMIAR_SCORE)
-#  Ex.: risada forte sozinha (0.95 x 0.6 = 0.57) já dispara;
-#       volume + chat sem risada/grito/explosão (0.5) não dispara.
+#  Ex.: risada média sozinha (0.75 x 0.6 = 0.45) já dispara;
+#       grito alto (+10 dB) com chat agitado também.
 # ---------------------------------------------------------------------
-LIMIAR_SCORE = 0.55
+LIMIAR_SCORE = 0.45
 PESO_AUDIO = 0.6  # risada / grito / explosão (YAMNet)
 PESO_VOLUME = 0.2  # volume acima da média do streamer
 PESO_CHAT = 0.3  # pico de mensagens no chat
 
 LIMIAR_MUSICA = 0.5  # se "Music" dominar o áudio, o evento é ignorado
-DB_ACIMA_MEDIA_MIN = 6  # +6 dB acima da média começa a pontuar
-DB_ACIMA_MEDIA_MAX = 12  # +12 dB = pontuação máxima de volume
+DB_ACIMA_MEDIA_MIN = 5  # +5 dB acima da média começa a pontuar
+DB_ACIMA_MEDIA_MAX = 10  # +10 dB = pontuação máxima de volume
 
 PALAVRAS_CHAT = [
     "kkk",
