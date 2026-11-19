@@ -1,6 +1,6 @@
-# Auto-Clipper de Lives (Twitch + YouTube)
+# Auto-Clipper de Lives (Twitch + YouTube + Kick)
 
-Monitora lives da **Twitch** e do **YouTube** em tempo real e, quando detecta um momento marcante — **risada, grito, explosão no jogo, fala mais alta ou pico no chat** — gera automaticamente um clipe de **3 minutos** (1 min antes + 2 min depois do momento) já no **formato vertical 9:16**, pronto para Reels, TikTok e Shorts. Tudo controlado por um **painel no navegador**.
+Monitora lives da **Twitch**, do **YouTube** e do **Kick** em tempo real e, quando detecta um momento marcante — **risada, grito, explosão no jogo, fala mais alta ou pico no chat** — gera automaticamente um clipe de **3 minutos** (1 min antes + 2 min depois do momento) já no **formato vertical 9:16**, pronto para Reels, TikTok e Shorts. Tudo controlado por um **painel no navegador**.
 
 Feito para lives de GTA em português, mas funciona com qualquer live.
 
@@ -23,7 +23,7 @@ chat (Twitch IRC / YouTube via yt-dlp) ──► ritmo de mensagens ─┴─►
 1. Cada live roda em sua própria thread. O vídeo é gravado em pedaços de 10 s num buffer circular, **sem recodificar** (`-c copy`), então quase não usa CPU.
 2. A cada segundo o áudio é analisado pelo **[YAMNet](https://tfhub.dev/google/yamnet/1)** (modelo do Google que reconhece 521 tipos de som), rodando na CPU.
 3. O volume é comparado com a **média do próprio streamer** (últimos 2 min), não com um valor fixo.
-4. O chat é lido em paralelo: um pico de mensagens (ou muitas com `kkk`, `kekw`, `💀`...) aumenta o score.
+4. O chat é lido em paralelo: um pico de mensagens (ou muitas com `kkk`, `kekw`, `💀`...) aumenta o score. No **Kick** o chat não é lido (fica atrás de uma proteção anti-robô): a live é monitorada só pelo áudio.
 5. Quando o score passa do limiar, os pedaços do buffer viram o **original 16:9**, e uma **fila** (um clipe por vez, para não atrapalhar a captura) gera o **vertical**.
 
 ### Score de detecção
@@ -159,7 +159,7 @@ Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe 
 | **Finalizar** | Desconecta e apaga o buffer daquela live |
 | **Apagar clipes antigos** | Mostra quantos arquivos (vertical + original) serão apagados e pede confirmação |
 | **Marcar câmera** | Abre um quadro da live numa janela: arraste o retângulo sobre a câmera e aperte ENTER |
-| **🔗 Lives monitoradas** | Adiciona ou remove lives **sem reiniciar**: cole o link (Twitch ou YouTube) e aperte Adicionar. Remover finaliza a live antes, sem perder os clipes pendentes |
+| **🔗 Lives monitoradas** | Adiciona ou remove lives **sem reiniciar**: cole o link (Twitch, YouTube ou Kick) e aperte Adicionar. Remover finaliza a live antes, sem perder os clipes pendentes |
 
 A lista começa com o `LINKS_DAS_LIVES` do `config_local.py`. Depois da primeira mudança pelo painel, ela fica salva em `lives.json` (fora do Git), que passa a valer no lugar do `LINKS_DAS_LIVES`. Para voltar a usar o `config_local.py`, apague o `lives.json`.
 
@@ -253,6 +253,7 @@ Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura d
 | Detecção de áudio | [YAMNet](https://tfhub.dev/google/yamnet/1) (TensorFlow Hub) |
 | Chat Twitch | IRC anônimo (`irc.chat.twitch.tv`) |
 | Chat YouTube | yt-dlp (`--sub-langs live_chat`) |
+| Kick | streamlink (captura); chat não suportado |
 | Painel | [Streamlit](https://streamlit.io/) |
 | Marcar câmera | [OpenCV](https://opencv.org/) |
 | Acesso pelo celular | [Tailscale](https://tailscale.com/) (`tailscale serve`) |

@@ -53,7 +53,9 @@ def test_adicionar_link_sem_https(arquivo):
     assert ok and g.monitores[-1].url == "https://twitch.tv/canal_b"
 
 
-@pytest.mark.parametrize("link", ["", "   ", "https://kick.com/x", "qualquer coisa"])
+@pytest.mark.parametrize(
+    "link", ["", "   ", "https://vimeo.com/x", "qualquer coisa", "https://www.twitch.tv/.."]
+)
 def test_adicionar_link_invalido_e_recusado(arquivo, link):
     g = Gerenciador()
     ok, _ = g.adicionar_live(link)

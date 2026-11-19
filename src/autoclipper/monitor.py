@@ -41,15 +41,35 @@ PARADA, CONECTANDO, AO_VIVO, OFFLINE, PAUSADA = (
 )
 
 
+# O nome do canal vira nome de pasta e de arquivo, então só passa se for "limpo"
+# (nunca "..", barras ou ":" que levariam a outra pasta do disco).
+NOME_TWITCH = re.compile(r"^[a-z0-9_]{2,25}$")
+NOME_KICK = re.compile(r"^[a-z0-9_-]{2,30}$")
+PAGINAS_KICK = {"video", "videos", "categories", "category", "browse", "following", "search"}
+
+
+def _do_site(host: str, dominio: str) -> bool:
+    """host é exatamente o domínio ou um subdomínio dele (twitch.tv.outro.com não vale)."""
+    return host == dominio or host.endswith("." + dominio)
+
+
 def identificar_live(url: str):
     """Retorna (plataforma, nome_canal) a partir do link."""
     u = urlparse(url.strip())
-    host = u.netloc.lower()
+    host = (u.hostname or "").lower()
     partes = [p for p in u.path.split("/") if p]
     nome = None
-    if "twitch.tv" in host and partes:
-        return "twitch", partes[0].lower()
-    if "youtube.com" in host or "youtu.be" in host:
+    if _do_site(host, "twitch.tv") and partes:
+        nome = partes[0].lower()
+        if NOME_TWITCH.match(nome):
+            return "twitch", nome
+        raise ValueError(f"Nome de canal inválido: {url}")
+    if _do_site(host, "kick.com") and partes and partes[0].lower() not in PAGINAS_KICK:
+        nome = partes[0].lower()
+        if NOME_KICK.match(nome):
+            return "kick", nome
+        raise ValueError(f"Nome de canal inválido: {url}")
+    if _do_site(host, "youtube.com") or _do_site(host, "youtu.be"):
         if partes and partes[0].startswith("@"):
             nome = partes[0][1:]
         elif "v" in parse_qs(u.query):
@@ -72,6 +92,9 @@ class MonitorLive:
     def __init__(self, url: str, fila, detector=None):
         self.url = url.strip()
         self.plataforma, self.canal = identificar_live(self.url)
+        if self.plataforma == "kick":
+            # link de clipe/VOD do canal vira o link da live
+            self.url = f"https://kick.com/{self.canal}"
         self.fila = fila
         self.detector = detector
         self.log = logging.getLogger(self.canal)

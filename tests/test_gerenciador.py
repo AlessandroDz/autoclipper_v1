@@ -87,7 +87,7 @@ def test_apagar_clipes_antigos_vertical_e_original(pastas):
 #  monitor
 # ---------------------------------------------------------------------
 def test_link_invalido_nao_derruba_o_gerenciador(pastas):
-    g = Gerenciador(links=["https://www.twitch.tv/burn", "https://kick.com/x", " "])
+    g = Gerenciador(links=["https://www.twitch.tv/burn", "https://vimeo.com/x", " "])
     assert [m.canal for m in g.monitores] == ["burn"]
     assert g.status()[0]["estado"] == PARADA
 

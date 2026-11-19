@@ -12,7 +12,7 @@ from pathlib import Path
 PASTA_BASE = Path.cwd()
 
 # ---------------------------------------------------------------------
-#  >>> LINKS DAS LIVES <<<   (Twitch ou YouTube) - defina no config_local.py
+#  >>> LINKS DAS LIVES <<<   (Twitch, YouTube ou Kick) - defina no config_local.py
 #  Ex.: ["https://www.twitch.tv/CANAL", "https://www.youtube.com/live/ID_DO_VIDEO"]
 # ---------------------------------------------------------------------
 LINKS_DAS_LIVES: list[str] = []

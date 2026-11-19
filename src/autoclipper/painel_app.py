@@ -239,7 +239,8 @@ with st.expander("🔗 Lives monitoradas (adicionar ou remover)", expanded=not g
     with st.form("nova_live", clear_on_submit=True, border=False):
         link = st.text_input(
             "Link da live",
-            placeholder="https://www.twitch.tv/CANAL  ou  https://www.youtube.com/watch?v=ID",
+            placeholder="twitch.tv/CANAL  ·  youtube.com/watch?v=ID  ·  kick.com/CANAL",
+            help="Kick: monitorado só pelo áudio (o chat do Kick não é lido).",
         )
         c_ini, c_add = st.columns([2, 1], vertical_alignment="center")
         ja_iniciar = c_ini.checkbox("Já começar a monitorar", value=True)

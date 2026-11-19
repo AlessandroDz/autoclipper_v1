@@ -42,6 +42,9 @@ def _textos_chat_youtube(linha: str):
     return textos
 
 
+PLATAFORMAS_COM_CHAT = ("twitch", "youtube")
+
+
 class LeitorChat:
     def __init__(self, plataforma: str, canal: str, url: str, parar: threading.Event):
         self.plataforma = plataforma
@@ -55,6 +58,11 @@ class LeitorChat:
 
     # ---------------------------------------------------------------
     def iniciar(self):
+        if self.plataforma not in PLATAFORMAS_COM_CHAT:
+            # Kick: o chat fica atrás de uma proteção anti-robô; a live é
+            # monitorada só pelo áudio (o score do chat fica em 0)
+            self.log.info("Chat não suportado nesta plataforma: detecção só pelo áudio.")
+            return
         threading.Thread(target=self._loop, daemon=True).start()
 
     def _registrar(self, texto: str):

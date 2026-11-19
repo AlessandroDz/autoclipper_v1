@@ -118,7 +118,7 @@ class Gerenciador:
         try:
             novo = MonitorLive(url, self.fila)
         except ValueError:
-            return False, "Link não reconhecido. Use um link da Twitch ou do YouTube."
+            return False, "Link não reconhecido. Use um link da Twitch, do YouTube ou do Kick."
         with self._lock_lista:
             if any(m.canal == novo.canal for m in self.monitores):
                 return False, f"{novo.canal} já está na lista."
