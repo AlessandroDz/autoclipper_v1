@@ -142,6 +142,7 @@ Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe 
 ├────────────────────────────────────────────────────────────────┤
 │ burn · Twitch     🟢 Ao vivo         [✂ Clipar] [⏸ Pausar] [⏹]  │
 │ rodil · Twitch    ⏸ Pausada          [▶ Retomar] [⏹ Finalizar]  │
+│ 🔗 Lives monitoradas: [link da live…] [➕ Adicionar] · [🗑 Remover] │
 ├────────────────────────────────────────────────────────────────┤
 │ Últimos clipes: hora · canal · motivo · score · [▶] [📁]        │
 │ 🗑 Apagar clipes com mais de N dias                             │
@@ -158,6 +159,9 @@ Dê dois cliques em **`Abrir painel.bat`** (ou rode `.\.venv\Scripts\python.exe 
 | **Finalizar** | Desconecta e apaga o buffer daquela live |
 | **Apagar clipes antigos** | Mostra quantos arquivos (vertical + original) serão apagados e pede confirmação |
 | **Marcar câmera** | Abre um quadro da live numa janela: arraste o retângulo sobre a câmera e aperte ENTER |
+| **🔗 Lives monitoradas** | Adiciona ou remove lives **sem reiniciar**: cole o link (Twitch ou YouTube) e aperte Adicionar. Remover finaliza a live antes, sem perder os clipes pendentes |
+
+A lista começa com o `LINKS_DAS_LIVES` do `config_local.py`. Depois da primeira mudança pelo painel, ela fica salva em `lives.json` (fora do Git), que passa a valer no lugar do `LINKS_DAS_LIVES`. Para voltar a usar o `config_local.py`, apague o `lives.json`.
 
 ### Pelo celular (Tailscale)
 
@@ -209,6 +213,7 @@ src/autoclipper/
 ├── monitor.py        # MonitorLive: captura, buffer, análise, pausa, clipe manual
 ├── vertical.py       # layouts 9:16, codificador (AMF/CPU) e fila de processamento
 ├── canais.py         # layout e câmera por canal (canais.json)
+├── lives.py          # lista de lives editada pelo painel (lives.json)
 ├── marcar_camera.py  # janela para marcar a câmera do streamer
 ├── detector.py       # DetectorAudio (YAMNet) + volume em dB
 ├── chat.py           # LeitorChat: Twitch (IRC anônimo) e YouTube (yt-dlp)
@@ -219,6 +224,7 @@ tests/                # testes automatizados (pytest)
 Abrir painel.bat      # atalho de dois cliques para o painel
 config_local.py       # seus links e pastas (fora do Git)
 canais.json           # layout e câmera por canal, gravado pelo painel (fora do Git)
+lives.json            # lista de lives, gravada pelo painel (fora do Git)
 pyproject.toml        # metadados, dependências e configuração do Ruff e do pytest
 ```
 
@@ -236,7 +242,7 @@ Instale as ferramentas de desenvolvimento ([Ruff](https://docs.astral.sh/ruff/) 
 .\.venv\Scripts\python.exe -m ruff format .     # formatação
 ```
 
-Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura dos links, o parser do chat do YouTube, o score do chat, o cálculo de volume, o `config_local.py`, os filtros dos layouts A e C, os ajustes por canal, os nomes dos clipes, a seleção de trechos depois de uma pausa, a limpeza de clipes antigos e a publicação no Tailscale.
+Os testes não precisam de live, ffmpeg nem do modelo YAMNet: cobrem a leitura dos links, o parser do chat do YouTube, o score do chat, o cálculo de volume, o `config_local.py`, os filtros dos layouts A e C, os ajustes por canal, os nomes dos clipes, a seleção de trechos depois de uma pausa, a limpeza de clipes antigos, a publicação no Tailscale e a lista de lives editável pelo painel.
 
 ## Stack
 

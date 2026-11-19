@@ -22,6 +22,8 @@ videos/
 # Configurações locais (seus links e pastas) / segredos
 config_local.py
 canais.json
+lives.json
+*.tmp
 .env
 
 # Sistema e editores

@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import config, sistema
+from . import config, lives, sistema
 from .monitor import PAUSADA, MonitorLive
 from .vertical import FilaVertical
 
@@ -45,17 +45,28 @@ def ler_nome_clipe(nome: str):
 
 class Gerenciador:
     def __init__(self, links=None):
+        """links=None lê a lista salva (lives.json ou config_local.py) e salva as
+        mudanças feitas pelo painel; uma lista explícita não é salva (testes)."""
         self.fila = FilaVertical()
         self.detector = None
         self._lock_detector = threading.Lock()
+        self._lock_lista = threading.Lock()
+        self._salvar_lista = links is None
+        # a lista é trocada inteira a cada mudança (nunca alterada no lugar), então
+        # quem estiver percorrendo a lista antiga (o painel) não é atrapalhado
         self.monitores: list[MonitorLive] = []
-        for url in links if links is not None else config.LINKS_DAS_LIVES:
+        for url in links if links is not None else lives.carregar_links():
             if not url.strip():
                 continue
             try:
-                self.monitores.append(MonitorLive(url, self.fila))
+                m = MonitorLive(url, self.fila)
             except ValueError as e:
                 log.error(str(e))
+                continue
+            if any(x.canal == m.canal for x in self.monitores):
+                log.warning(f"Live repetida ignorada: {url}")
+                continue
+            self.monitores.append(m)
 
     # =================================================================
     #  COMANDOS
@@ -93,6 +104,43 @@ class Gerenciador:
 
     def clipar(self, canal: str):
         return self.monitor(canal).clipar_agora()
+
+    # =================================================================
+    #  LISTA DE LIVES (editável pelo painel, sem reiniciar)
+    # =================================================================
+    def adicionar_live(self, url: str, iniciar: bool = False) -> tuple[bool, str]:
+        """Coloca uma live nova na lista. Retorna (ok, mensagem)."""
+        url = url.strip()
+        if not url:
+            return False, "Cole o link da live."
+        if "://" not in url:
+            url = "https://" + url  # "twitch.tv/canal" colado sem o https
+        try:
+            novo = MonitorLive(url, self.fila)
+        except ValueError:
+            return False, "Link não reconhecido. Use um link da Twitch ou do YouTube."
+        with self._lock_lista:
+            if any(m.canal == novo.canal for m in self.monitores):
+                return False, f"{novo.canal} já está na lista."
+            self.monitores = [*self.monitores, novo]
+            self._gravar_lista()
+        log.info(f"Live adicionada pelo painel: {url}")
+        if iniciar:
+            self.iniciar(novo.canal)
+        return True, f"{novo.canal} adicionada."
+
+    def remover_live(self, canal: str) -> None:
+        """Finaliza a live (clipes pendentes são terminados) e tira da lista."""
+        m = self.monitor(canal)
+        m.finalizar()
+        with self._lock_lista:
+            self.monitores = [x for x in self.monitores if x is not m]
+            self._gravar_lista()
+        log.info(f"Live removida pelo painel: {m.url}")
+
+    def _gravar_lista(self) -> None:
+        if self._salvar_lista:
+            lives.salvar_links([m.url for m in self.monitores])
 
     def iniciar_todas(self):
         for m in self.monitores:

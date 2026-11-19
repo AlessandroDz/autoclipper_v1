@@ -167,11 +167,7 @@ if st.session_state.get("confirmar_encerrar"):
             st.rerun()
 
 if not g.monitores:
-    st.warning(
-        "Nenhuma live configurada. Coloque os links em `LINKS_DAS_LIVES` no arquivo "
-        f"`{config.ARQUIVO_CONFIG_LOCAL}` e reabra o painel."
-    )
-    st.stop()
+    st.info("Nenhuma live na lista. Adicione uma em **🔗 Lives monitoradas** logo abaixo.")
 
 
 # =====================================================================
@@ -234,6 +230,51 @@ def lives():
 
 
 lives()
+
+
+# =====================================================================
+#  LISTA DE LIVES (adicionar / remover sem reiniciar)
+# =====================================================================
+with st.expander("🔗 Lives monitoradas (adicionar ou remover)", expanded=not g.monitores):
+    with st.form("nova_live", clear_on_submit=True, border=False):
+        link = st.text_input(
+            "Link da live",
+            placeholder="https://www.twitch.tv/CANAL  ou  https://www.youtube.com/watch?v=ID",
+        )
+        c_ini, c_add = st.columns([2, 1], vertical_alignment="center")
+        ja_iniciar = c_ini.checkbox("Já começar a monitorar", value=True)
+        if c_add.form_submit_button("➕ Adicionar", use_container_width=True):
+            with st.spinner("Adicionando…"):
+                ok, msg = g.adicionar_live(link, iniciar=ja_iniciar)
+            if ok:
+                st.session_state["aviso_lista"] = msg
+                st.rerun()
+            st.error(msg)
+
+    if aviso := st.session_state.pop("aviso_lista", None):
+        st.success(aviso)
+
+    remover = st.session_state.get("remover_live")
+    for m in g.monitores:
+        c_nome, c_btn = st.columns([4, 1.2], vertical_alignment="center")
+        c_nome.markdown(f"**{m.canal}** · {m.plataforma.capitalize()}  \n`{m.url}`")
+        if remover == m.canal:
+            if c_btn.button("Confirmar", key=f"rm_ok_{m.canal}", type="primary"):
+                with st.spinner(f"Finalizando {m.canal}…"):
+                    g.remover_live(m.canal)
+                st.session_state.pop("remover_live", None)
+                st.session_state["aviso_lista"] = f"{m.canal} removida."
+                st.rerun()
+            c_nome.warning(
+                "Remover esta live? Se estiver gravando, ela é finalizada "
+                "(os clipes pendentes são terminados antes)."
+            )
+            if c_btn.button("Cancelar", key=f"rm_nao_{m.canal}"):
+                st.session_state.pop("remover_live", None)
+                st.rerun()
+        elif c_btn.button("🗑️ Remover", key=f"rm_{m.canal}", use_container_width=True):
+            st.session_state["remover_live"] = m.canal
+            st.rerun()
 
 
 # =====================================================================

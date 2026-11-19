@@ -94,6 +94,8 @@ VERTICAL_BITRATE = "10M"
 
 # Ajustes por canal (layout e posição da câmera), gravados pelo painel
 ARQUIVO_CANAIS = PASTA_BASE / "canais.json"
+# Lista de lives editada pelo painel (quando existe, vale no lugar de LINKS_DAS_LIVES)
+ARQUIVO_LIVES = PASTA_BASE / "lives.json"
 
 # ---------------------------------------------------------------------
 #  CALIBRAÇÃO
