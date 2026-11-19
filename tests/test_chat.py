@@ -73,7 +73,10 @@ def test_pico_de_mensagens_da_score_maximo(leitor):
     assert leitor.score() == pytest.approx(1.0)
 
 
-def test_palavras_chave_somam_bonus():
+def test_palavras_chave_somam_bonus(monkeypatch):
+    # relógio parado: os dois cenários precisam ver exatamente as mesmas mensagens
+    monkeypatch.setattr(time, "time", lambda: 1_000_000.0)
+
     def cenario(palavra_chave):
         leitor = LeitorChat("twitch", "canal", "https://twitch.tv/canal", threading.Event())
         leitor.inicio = time.time() - 300
